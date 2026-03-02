@@ -1,0 +1,19 @@
+.DS_Store
+
+# Build outputs
+build/
+**/build/
+**/cmake-build-*/
+
+# App bundles / generated artifacts
+*.app/
+*_artefacts/
+
+# IDE
+.vscode/
+.idea/
+
+# Temp / logs
+*.log
+*.tmp
+*.temp
