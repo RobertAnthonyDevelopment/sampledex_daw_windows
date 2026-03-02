@@ -222,7 +222,9 @@ bool insertStepSequencerNoteAtCell (te::MidiClip& midiClip,
     const double maxStartBeat = juce::jmax (0.0, clipLengthBeats - minimumLengthBeats);
     const double startBeat = juce::jlimit (0.0, maxStartBeat, unclampedStartBeat);
     const double maxLengthBeats = juce::jmax (minimumLengthBeats, clipLengthBeats - startBeat);
-    const double lengthBeats = juce::jlimit (minimumLengthBeats, maxLengthBeats, stepLengthBeats);
+    constexpr double stepGate = 0.92;
+    const double gatedLengthBeats = juce::jmax (minimumLengthBeats, stepLengthBeats * stepGate);
+    const double lengthBeats = juce::jlimit (minimumLengthBeats, maxLengthBeats, gatedLengthBeats);
 
     return midiClip.getSequence().addNote (noteNumber,
                                            te::BeatPosition::fromBeats (startBeat),
@@ -1372,6 +1374,7 @@ void BeatMakerNoRecord::TimelineRulerComponent::mouseWheelMove (const juce::Mous
 
 void BeatMakerNoRecord::TimelineRulerComponent::timerCallback()
 {
+    owner.runTransportPlaybackSafetyCheck();
     owner.updateTransportInfoLabel();
 
     if (owner.shouldAnimateTimelineRuler())

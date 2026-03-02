@@ -247,6 +247,10 @@ private:
     bool updatingTrackControls = false;
     bool updatingViewControls = false;
     bool lastTransportPlaying = false;
+    bool playbackSafetyWasPlaying = false;
+    te::TimePosition playbackSafetyLastPosition = te::TimePosition::fromSeconds (0.0);
+    te::EditItemID playbackSafetyActiveClipID;
+    double playbackSafetyLastActiveClipBeat = -1.0;
     juce::Rectangle<int> lastEditViewportBounds;
     bool timelineLoopDragActive = false;
     int timelineLoopDragStartX = 0;
@@ -750,6 +754,7 @@ private:
     bool shouldAnimateTimelineRuler() const;
     bool shouldAnimateMidiPianoRoll() const;
     bool shouldAnimateStepSequencer() const;
+    void runTransportPlaybackSafetyCheck();
     void paintTimelineRuler (juce::Graphics& g, juce::Rectangle<int> area);
     void paintMixerArea (juce::Graphics& g, juce::Rectangle<int> area);
     void paintStepSequencer (juce::Graphics& g, juce::Rectangle<int> area);
@@ -796,6 +801,8 @@ private:
     bool prepareTrackForMidiPlayback (te::AudioTrack& track, int& enabledInstruments, int& addedInstruments);
     bool enableExistingInstrumentForDefaultMode (te::AudioTrack& track, DefaultSynthMode mode, int& enabledInstruments);
     bool insertInstrumentForDefaultMode (te::AudioTrack& track, DefaultSynthMode mode, int& addedInstruments);
+    te::Plugin* choosePreferredInstrumentPluginForMode (te::AudioTrack& track, DefaultSynthMode mode) const;
+    bool normalizeTrackInstrumentActivationForMode (te::AudioTrack& track, DefaultSynthMode mode, int& enabledInstruments);
     bool normalizeTrackPluginOrderForPlayback (te::AudioTrack& track, int& movedPlugins);
     bool trackHasInstrumentPlugin (te::AudioTrack& track) const;
     int getPluginInsertIndexForTrack (te::AudioTrack& track, bool forInstrument) const;

@@ -2397,6 +2397,17 @@ void BeatMakerNoRecord::addBuiltInPluginToSelectedTrack (const juce::String& plu
     track->pluginList.insertPlugin (plugin, insertIndex, &selectionManager);
     plugin->setEnabled (true);
 
+    if (isInstrument)
+    {
+        for (auto* other : track->pluginList.getPlugins())
+        {
+            if (other == nullptr || other == plugin.get() || ! other->isSynth())
+                continue;
+
+            other->setEnabled (false);
+        }
+    }
+
     if (pluginType == "4osc")
         applyBuiltInSynthPresetToPlugin (*plugin, BuiltInSynthPreset::warmPad);
 
@@ -2514,18 +2525,107 @@ bool BeatMakerNoRecord::insertInstrumentForDefaultMode (te::AudioTrack& track,
     return true;
 }
 
+te::Plugin* BeatMakerNoRecord::choosePreferredInstrumentPluginForMode (te::AudioTrack& track, DefaultSynthMode mode) const
+{
+    auto plugins = track.pluginList.getPlugins();
+
+    te::Plugin* preferredEnabled = nullptr;
+    te::Plugin* preferredAny = nullptr;
+    te::Plugin* enabledFallback = nullptr;
+    te::Plugin* anyFallback = nullptr;
+
+    const auto isPreferredForMode = [mode] (te::Plugin* plugin)
+    {
+        if (plugin == nullptr || ! plugin->isSynth())
+            return false;
+
+        switch (mode)
+        {
+            case DefaultSynthMode::force4Osc:
+                return plugin->getPluginType().equalsIgnoreCase ("4osc");
+
+            case DefaultSynthMode::forceExternalVst3:
+                if (auto* external = dynamic_cast<te::ExternalPlugin*> (plugin))
+                    return external->isVST3();
+                return false;
+
+            case DefaultSynthMode::autoPreferExternal:
+            default:
+                return dynamic_cast<te::ExternalPlugin*> (plugin) != nullptr;
+        }
+    };
+
+    for (auto* plugin : plugins)
+    {
+        if (plugin == nullptr || ! plugin->isSynth())
+            continue;
+
+        if (anyFallback == nullptr)
+            anyFallback = plugin;
+
+        const bool enabled = plugin->isEnabled();
+        if (enabled && enabledFallback == nullptr)
+            enabledFallback = plugin;
+
+        if (! isPreferredForMode (plugin))
+            continue;
+
+        if (preferredAny == nullptr)
+            preferredAny = plugin;
+
+        if (enabled && preferredEnabled == nullptr)
+            preferredEnabled = plugin;
+    }
+
+    if (preferredEnabled != nullptr)
+        return preferredEnabled;
+
+    if (preferredAny != nullptr)
+        return preferredAny;
+
+    if (enabledFallback != nullptr)
+        return enabledFallback;
+
+    return anyFallback;
+}
+
+bool BeatMakerNoRecord::normalizeTrackInstrumentActivationForMode (te::AudioTrack& track,
+                                                                   DefaultSynthMode mode,
+                                                                   int& enabledInstruments)
+{
+    auto* preferred = choosePreferredInstrumentPluginForMode (track, mode);
+    if (preferred == nullptr)
+        return false;
+
+    bool changed = false;
+    for (auto* plugin : track.pluginList.getPlugins())
+    {
+        if (plugin == nullptr || ! plugin->isSynth())
+            continue;
+
+        const bool shouldEnable = (plugin == preferred);
+        if (plugin->isEnabled() == shouldEnable)
+            continue;
+
+        plugin->setEnabled (shouldEnable);
+        if (shouldEnable)
+            ++enabledInstruments;
+        changed = true;
+    }
+
+    return changed;
+}
+
 bool BeatMakerNoRecord::prepareTrackForMidiPlayback (te::AudioTrack& track, int& enabledInstruments, int& addedInstruments)
 {
     if (edit == nullptr || ! trackHasMidiContent (track))
         return false;
 
     const auto defaultMode = getDefaultSynthModeSelection();
-    const bool enabledExisting = enableExistingInstrumentForDefaultMode (track, defaultMode, enabledInstruments);
-    if (trackHasInstrumentPlugin (track))
-        return enabledExisting;
+    bool changed = enableExistingInstrumentForDefaultMode (track, defaultMode, enabledInstruments);
 
-    if (insertInstrumentForDefaultMode (track, defaultMode, addedInstruments))
-        return true;
+    if (! trackHasInstrumentPlugin (track) && insertInstrumentForDefaultMode (track, defaultMode, addedInstruments))
+        changed = true;
 
     // Always guarantee a playable instrument path for MIDI tracks, even if forced
     // external mode has no available plugins.
@@ -2537,11 +2637,14 @@ bool BeatMakerNoRecord::prepareTrackForMidiPlayback (te::AudioTrack& track, int&
             fallbackPlugin->setEnabled (true);
             applyBuiltInSynthPresetToPlugin (*fallbackPlugin, BuiltInSynthPreset::warmPad);
             ++addedInstruments;
-            return true;
+            changed = true;
         }
     }
 
-    return enabledExisting;
+    if (trackHasInstrumentPlugin (track))
+        changed = normalizeTrackInstrumentActivationForMode (track, defaultMode, enabledInstruments) || changed;
+
+    return changed;
 }
 
 bool BeatMakerNoRecord::normalizeTrackPluginOrderForPlayback (te::AudioTrack& track, int& movedPlugins)
@@ -2867,6 +2970,13 @@ void BeatMakerNoRecord::addExternalInstrumentPluginToSelectedTrack()
 
     track->pluginList.insertPlugin (plugin, getPluginInsertIndexForTrack (*track, true), &selectionManager);
     plugin->setEnabled (true);
+    for (auto* other : track->pluginList.getPlugins())
+    {
+        if (other == nullptr || other == plugin.get() || ! other->isSynth())
+            continue;
+
+        other->setEnabled (false);
+    }
     refreshSelectedTrackPluginList();
 
     const int insertedIndex = track->pluginList.indexOf (plugin.get());
@@ -3007,6 +3117,13 @@ void BeatMakerNoRecord::addBundledNovaSynthToSelectedTrack()
 
     track->pluginList.insertPlugin (plugin, getPluginInsertIndexForTrack (*track, true), &selectionManager);
     plugin->setEnabled (true);
+    for (auto* other : track->pluginList.getPlugins())
+    {
+        if (other == nullptr || other == plugin.get() || ! other->isSynth())
+            continue;
+
+        other->setEnabled (false);
+    }
     refreshSelectedTrackPluginList();
 
     const int insertedIndex = track->pluginList.indexOf (plugin.get());
@@ -3209,8 +3326,25 @@ void BeatMakerNoRecord::toggleSelectedTrackPluginBypass()
         return;
     }
 
-    plugin->setEnabled (! plugin->isEnabled());
+    const bool wasEnabled = plugin->isEnabled();
+    plugin->setEnabled (! wasEnabled);
+
+    if (! wasEnabled && plugin->isSynth())
+    {
+        if (auto* ownerTrack = dynamic_cast<te::AudioTrack*> (plugin->getOwnerTrack()))
+        {
+            for (auto* other : ownerTrack->pluginList.getPlugins())
+            {
+                if (other == nullptr || other == plugin || ! other->isSynth())
+                    continue;
+
+                other->setEnabled (false);
+            }
+        }
+    }
+
     refreshSelectedTrackPluginList();
+    markPlaybackRoutingNeedsPreparation();
     updateButtonsFromState();
     setStatus (plugin->isEnabled() ? "Plugin enabled: " + plugin->getName()
                                    : "Plugin bypassed: " + plugin->getName());

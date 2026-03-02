@@ -2014,6 +2014,10 @@ void BeatMakerNoRecord::setCurrentEdit (std::unique_ptr<te::Edit> newEdit, const
     edit->getTransport().addChangeListener (this);
     edit->getTransport().ensureContextAllocated();
     lastTransportPlaying = edit->getTransport().isPlaying();
+    playbackSafetyWasPlaying = lastTransportPlaying;
+    playbackSafetyLastPosition = edit->getTransport().getPosition();
+    playbackSafetyActiveClipID = {};
+    playbackSafetyLastActiveClipBeat = -1.0;
 
     if (te::getAudioTracks (*edit).isEmpty())
     {
@@ -2270,6 +2274,7 @@ void BeatMakerNoRecord::processTransportChangeForUi()
     if (edit == nullptr)
         return;
 
+    runTransportPlaybackSafetyCheck();
     updatePlayButtonText();
     updateTransportLoopButton();
 
@@ -2297,6 +2302,74 @@ void BeatMakerNoRecord::processTransportChangeForUi()
         midiPianoRoll.repaint();
         updateTransportInfoLabel();
     }
+}
+
+void BeatMakerNoRecord::runTransportPlaybackSafetyCheck()
+{
+    if (edit == nullptr)
+    {
+        playbackSafetyWasPlaying = false;
+        playbackSafetyLastPosition = te::TimePosition::fromSeconds (0.0);
+        playbackSafetyActiveClipID = {};
+        playbackSafetyLastActiveClipBeat = -1.0;
+        return;
+    }
+
+    auto& transport = edit->getTransport();
+    const bool nowPlaying = transport.isPlaying();
+    const auto currentPosition = transport.getPosition();
+
+    auto resetClipTracking = [this]
+    {
+        playbackSafetyActiveClipID = {};
+        playbackSafetyLastActiveClipBeat = -1.0;
+    };
+
+    if (nowPlaying && playbackSafetyWasPlaying && transport.looping)
+        if (currentPosition.inSeconds() + 1.0e-3 < playbackSafetyLastPosition.inSeconds())
+            te::midiPanic (*edit, false);
+
+    if (! nowPlaying && playbackSafetyWasPlaying)
+        te::midiPanic (*edit, false);
+
+    if (nowPlaying)
+    {
+        if (auto* midiClip = getSelectedMidiClip())
+        {
+            const double clipLengthBeats = juce::jmax (1.0 / 64.0, getMidiClipLengthBeats (*midiClip));
+            const double clipBeat = midiClip->getContentBeatAtTime (currentPosition).inBeats();
+            const bool beatLooksValid = std::isfinite (clipBeat)
+                                     && clipBeat >= -(1.0 / 32.0)
+                                     && clipBeat <= clipLengthBeats + (1.0 / 32.0);
+
+            if (playbackSafetyActiveClipID != midiClip->itemID || ! beatLooksValid)
+            {
+                playbackSafetyActiveClipID = midiClip->itemID;
+                playbackSafetyLastActiveClipBeat = beatLooksValid ? clipBeat : -1.0;
+            }
+            else
+            {
+                if (playbackSafetyLastActiveClipBeat >= 0.0
+                    && clipBeat + (1.0 / 32.0) < playbackSafetyLastActiveClipBeat)
+                {
+                    te::midiPanic (*edit, false);
+                }
+
+                playbackSafetyLastActiveClipBeat = clipBeat;
+            }
+        }
+        else
+        {
+            resetClipTracking();
+        }
+    }
+    else
+    {
+        resetClipTracking();
+    }
+
+    playbackSafetyWasPlaying = nowPlaying;
+    playbackSafetyLastPosition = currentPosition;
 }
 
 void BeatMakerNoRecord::processSelectionChangeForUi()
