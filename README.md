@@ -55,3 +55,8 @@ The executable is produced under `build/windows-vs2022` (search for `TheSamplede
 - `BeatMakerApp/Source/common` - shared UI and helper components
 - `ThirdParty/tracktion_engine` - Tracktion Engine sources and CMake support
 - `ThirdParty/JUCE` - JUCE sources (used when local JUCE CMake support is complete)
+
+## License
+
+This repository is licensed under MIT (see `LICENSE`), except third-party code
+in `ThirdParty/`, which remains under its original licenses.
