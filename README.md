@@ -1,12 +1,12 @@
 # Sampledex DAW (Windows Prototype)
 
-<img width="1919" height="962" alt="Screenshot 2026-03-03 at 2 42 36 PM" src="https://github.com/user-attachments/assets/cd4d41cf-75c1-4c1c-8f48-6e0c26f616d2" />
-<img width="1919" height="962" alt="Screenshot 2026-03-03 at 2 42 45 PM" src="https://github.com/user-attachments/assets/66c047f4-5543-4e51-8bc3-671d3d714240" />
-<img width="1919" height="962" alt="Screenshot 2026-03-03 at 2 43 47 PM" src="https://github.com/user-attachments/assets/e9f73461-68d1-49f2-9b99-bee69321da24" />
-
 ![Made with Codex](https://img.shields.io/badge/Made%20with-Codex-0A7CFF?style=flat-square)
 ![Built with JUCE](https://img.shields.io/badge/Built%20with-JUCE-8A2BE2?style=flat-square)
 ![Powered by Tracktion Engine](https://img.shields.io/badge/Powered%20by-Tracktion%20Engine-2F8D46?style=flat-square)
+
+<img width="1919" height="962" alt="Screenshot 2026-03-03 at 2 42 36 PM" src="https://github.com/user-attachments/assets/cd4d41cf-75c1-4c1c-8f48-6e0c26f616d2" />
+<img width="1919" height="962" alt="Screenshot 2026-03-03 at 2 42 45 PM" src="https://github.com/user-attachments/assets/66c047f4-5543-4e51-8bc3-671d3d714240" />
+<img width="1919" height="962" alt="Screenshot 2026-03-03 at 2 43 47 PM" src="https://github.com/user-attachments/assets/e9f73461-68d1-49f2-9b99-bee69321da24" />
 
 This repository is an active prototype, not a finished DAW release.
 
