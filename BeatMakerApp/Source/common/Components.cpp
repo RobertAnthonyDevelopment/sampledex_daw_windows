@@ -722,25 +722,25 @@ void ClipComponent::updateMouseCursorForLocalX (int x, bool shiftDown)
 {
     juce::ignoreUnused (shiftDown);
 
-    juce::MouseCursor cursor = juce::MouseCursor::NormalCursor;
+    juce::MouseCursor mouseCursor = juce::MouseCursor::NormalCursor;
     const auto tool = getTimelineEditTool();
 
     if (tool == TimelineEditTool::pencil || tool == TimelineEditTool::scissors)
     {
-        cursor = juce::MouseCursor::CrosshairCursor;
+        mouseCursor = juce::MouseCursor::CrosshairCursor;
     }
     else if (tool == TimelineEditTool::resize)
     {
-        cursor = juce::MouseCursor::LeftRightResizeCursor;
+        mouseCursor = juce::MouseCursor::LeftRightResizeCursor;
     }
     else
     {
-        cursor = (isNearClipStartHandle (x) || isNearClipEndHandle (x))
-                     ? juce::MouseCursor::LeftRightResizeCursor
-                     : juce::MouseCursor::DraggingHandCursor;
+        mouseCursor = (isNearClipStartHandle (x) || isNearClipEndHandle (x))
+                          ? juce::MouseCursor::LeftRightResizeCursor
+                          : juce::MouseCursor::DraggingHandCursor;
     }
 
-    setMouseCursor (cursor);
+    setMouseCursor (mouseCursor);
 }
 
 //==============================================================================
@@ -1815,22 +1815,22 @@ void TrackComponent::mouseUp (const MouseEvent& e)
 
 void TrackComponent::mouseMove (const MouseEvent& e)
 {
-    juce::MouseCursor cursor = juce::MouseCursor::NormalCursor;
+    juce::MouseCursor mouseCursor = juce::MouseCursor::NormalCursor;
     if (resizingLaneHeight || isNearLaneResizeHandle (*this, e.y))
     {
-        cursor = juce::MouseCursor::UpDownResizeCursor;
+        mouseCursor = juce::MouseCursor::UpDownResizeCursor;
     }
     else
     {
         const auto activeTool = getTimelineEditTool();
 
         if (activeTool == TimelineEditTool::pencil || activeTool == TimelineEditTool::scissors)
-            cursor = juce::MouseCursor::CrosshairCursor;
+            mouseCursor = juce::MouseCursor::CrosshairCursor;
         else if (activeTool == TimelineEditTool::resize)
-            cursor = juce::MouseCursor::LeftRightResizeCursor;
+            mouseCursor = juce::MouseCursor::LeftRightResizeCursor;
     }
 
-    setMouseCursor (cursor);
+    setMouseCursor (mouseCursor);
 }
 
 void TrackComponent::mouseExit (const MouseEvent&)

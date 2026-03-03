@@ -5864,7 +5864,7 @@ void BeatMakerNoRecord::setSectionFloating (FloatSection section, bool shouldFlo
 
     auto readFloatingBounds = [this, section] (int minWidth, int minHeight, juce::Rectangle<int>& outBounds) -> bool
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
         int savedX = std::numeric_limits<int>::min();
         int savedY = std::numeric_limits<int>::min();
         int savedW = 0;
@@ -5873,22 +5873,22 @@ void BeatMakerNoRecord::setSectionFloating (FloatSection section, bool shouldFlo
         switch (section)
         {
             case FloatSection::workspace:
-                savedX = properties.getIntValue ("workspaceFloatX", std::numeric_limits<int>::min());
-                savedY = properties.getIntValue ("workspaceFloatY", std::numeric_limits<int>::min());
-                savedW = properties.getIntValue ("workspaceFloatW", 0);
-                savedH = properties.getIntValue ("workspaceFloatH", 0);
+                savedX = propertyFile.getIntValue ("workspaceFloatX", std::numeric_limits<int>::min());
+                savedY = propertyFile.getIntValue ("workspaceFloatY", std::numeric_limits<int>::min());
+                savedW = propertyFile.getIntValue ("workspaceFloatW", 0);
+                savedH = propertyFile.getIntValue ("workspaceFloatH", 0);
                 break;
             case FloatSection::mixer:
-                savedX = properties.getIntValue ("mixerFloatX", std::numeric_limits<int>::min());
-                savedY = properties.getIntValue ("mixerFloatY", std::numeric_limits<int>::min());
-                savedW = properties.getIntValue ("mixerFloatW", 0);
-                savedH = properties.getIntValue ("mixerFloatH", 0);
+                savedX = propertyFile.getIntValue ("mixerFloatX", std::numeric_limits<int>::min());
+                savedY = propertyFile.getIntValue ("mixerFloatY", std::numeric_limits<int>::min());
+                savedW = propertyFile.getIntValue ("mixerFloatW", 0);
+                savedH = propertyFile.getIntValue ("mixerFloatH", 0);
                 break;
             case FloatSection::piano:
-                savedX = properties.getIntValue ("pianoFloatX", std::numeric_limits<int>::min());
-                savedY = properties.getIntValue ("pianoFloatY", std::numeric_limits<int>::min());
-                savedW = properties.getIntValue ("pianoFloatW", 0);
-                savedH = properties.getIntValue ("pianoFloatH", 0);
+                savedX = propertyFile.getIntValue ("pianoFloatX", std::numeric_limits<int>::min());
+                savedY = propertyFile.getIntValue ("pianoFloatY", std::numeric_limits<int>::min());
+                savedW = propertyFile.getIntValue ("pianoFloatW", 0);
+                savedH = propertyFile.getIntValue ("pianoFloatH", 0);
                 break;
         }
 
@@ -5903,26 +5903,26 @@ void BeatMakerNoRecord::setSectionFloating (FloatSection section, bool shouldFlo
 
     auto writeFloatingBounds = [this, section] (const juce::Rectangle<int>& bounds)
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
         switch (section)
         {
             case FloatSection::workspace:
-                properties.setValue ("workspaceFloatX", bounds.getX());
-                properties.setValue ("workspaceFloatY", bounds.getY());
-                properties.setValue ("workspaceFloatW", bounds.getWidth());
-                properties.setValue ("workspaceFloatH", bounds.getHeight());
+                propertyFile.setValue ("workspaceFloatX", bounds.getX());
+                propertyFile.setValue ("workspaceFloatY", bounds.getY());
+                propertyFile.setValue ("workspaceFloatW", bounds.getWidth());
+                propertyFile.setValue ("workspaceFloatH", bounds.getHeight());
                 break;
             case FloatSection::mixer:
-                properties.setValue ("mixerFloatX", bounds.getX());
-                properties.setValue ("mixerFloatY", bounds.getY());
-                properties.setValue ("mixerFloatW", bounds.getWidth());
-                properties.setValue ("mixerFloatH", bounds.getHeight());
+                propertyFile.setValue ("mixerFloatX", bounds.getX());
+                propertyFile.setValue ("mixerFloatY", bounds.getY());
+                propertyFile.setValue ("mixerFloatW", bounds.getWidth());
+                propertyFile.setValue ("mixerFloatH", bounds.getHeight());
                 break;
             case FloatSection::piano:
-                properties.setValue ("pianoFloatX", bounds.getX());
-                properties.setValue ("pianoFloatY", bounds.getY());
-                properties.setValue ("pianoFloatW", bounds.getWidth());
-                properties.setValue ("pianoFloatH", bounds.getHeight());
+                propertyFile.setValue ("pianoFloatX", bounds.getX());
+                propertyFile.setValue ("pianoFloatY", bounds.getY());
+                propertyFile.setValue ("pianoFloatW", bounds.getWidth());
+                propertyFile.setValue ("pianoFloatH", bounds.getHeight());
                 break;
         }
     };
@@ -5988,8 +5988,8 @@ void BeatMakerNoRecord::setSectionFloating (FloatSection section, bool shouldFlo
         auto savedBounds = juce::Rectangle<int>();
         if (section == FloatSection::piano)
         {
-            auto& properties = engine.getPropertyStorage().getPropertiesFile();
-            pianoFloatingAlwaysOnTop = properties.getBoolValue ("pianoFloatAlwaysOnTop", true);
+            auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
+            pianoFloatingAlwaysOnTop = propertyFile.getBoolValue ("pianoFloatAlwaysOnTop", true);
             floatWindow->setAlwaysOnTop (pianoFloatingAlwaysOnTop);
         }
 
@@ -7053,22 +7053,22 @@ void BeatMakerNoRecord::menuItemSelected (int menuItemID, int)
 {
     auto persistWindowPanelState = [this]
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
-        properties.setValue ("windowPanelWorkspaceVisible", windowPanelWorkspaceVisible);
-        properties.setValue ("windowPanelMixerVisible", windowPanelMixerVisible);
-        properties.setValue ("windowPanelPianoVisible", windowPanelPianoVisible);
-        properties.setValue ("windowPanelArrangementVisible", windowPanelArrangementVisible);
-        properties.setValue ("windowPanelTrackVisible", windowPanelTrackVisible);
-        properties.setValue ("windowPanelClipVisible", windowPanelClipVisible);
-        properties.setValue ("windowPanelMidiVisible", windowPanelMidiVisible);
-        properties.setValue ("windowPanelAudioVisible", windowPanelAudioVisible);
-        properties.setValue ("windowPanelFxVisible", windowPanelFxVisible);
-        properties.setValue ("windowPanelTrackMixerVisible", windowPanelTrackMixerVisible);
-        properties.setValue ("windowPanelMixerAreaVisible", windowPanelMixerAreaVisible);
-        properties.setValue ("windowPanelChannelRackVisible", windowPanelChannelRackVisible);
-        properties.setValue ("windowPanelInspectorVisible", windowPanelInspectorVisible);
-        properties.setValue ("windowPanelPianoRollVisible", windowPanelPianoRollVisible);
-        properties.setValue ("windowPanelStepSequencerVisible", windowPanelStepSequencerVisible);
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
+        propertyFile.setValue ("windowPanelWorkspaceVisible", windowPanelWorkspaceVisible);
+        propertyFile.setValue ("windowPanelMixerVisible", windowPanelMixerVisible);
+        propertyFile.setValue ("windowPanelPianoVisible", windowPanelPianoVisible);
+        propertyFile.setValue ("windowPanelArrangementVisible", windowPanelArrangementVisible);
+        propertyFile.setValue ("windowPanelTrackVisible", windowPanelTrackVisible);
+        propertyFile.setValue ("windowPanelClipVisible", windowPanelClipVisible);
+        propertyFile.setValue ("windowPanelMidiVisible", windowPanelMidiVisible);
+        propertyFile.setValue ("windowPanelAudioVisible", windowPanelAudioVisible);
+        propertyFile.setValue ("windowPanelFxVisible", windowPanelFxVisible);
+        propertyFile.setValue ("windowPanelTrackMixerVisible", windowPanelTrackMixerVisible);
+        propertyFile.setValue ("windowPanelMixerAreaVisible", windowPanelMixerAreaVisible);
+        propertyFile.setValue ("windowPanelChannelRackVisible", windowPanelChannelRackVisible);
+        propertyFile.setValue ("windowPanelInspectorVisible", windowPanelInspectorVisible);
+        propertyFile.setValue ("windowPanelPianoRollVisible", windowPanelPianoRollVisible);
+        propertyFile.setValue ("windowPanelStepSequencerVisible", windowPanelStepSequencerVisible);
     };
 
     auto applyWindowPanelChange = [this, &persistWindowPanelState]
@@ -7624,12 +7624,12 @@ void BeatMakerNoRecord::setupSliders()
                                        juce::dontSendNotification);
 
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
-        auto storedMode = properties.getValue ("defaultInstrumentMode");
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
+        auto storedMode = propertyFile.getValue ("defaultInstrumentMode");
 
         if (storedMode.isEmpty())
             // Backward compatibility with older builds that stored this key as defaultSynthMode.
-            storedMode = properties.getValue ("defaultSynthMode",
+            storedMode = propertyFile.getValue ("defaultSynthMode",
                                               getDefaultInstrumentModeStorageValue (DefaultInstrumentMode::autoPreferExternal));
 
         const auto mode = getDefaultInstrumentModeForStorageValue (storedMode);
@@ -7654,31 +7654,31 @@ void BeatMakerNoRecord::setupSliders()
     }
 
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
-        leftDockWidthRatio = (float) juce::jlimit (0.12, 0.46, properties.getDoubleValue ("layoutLeftDockRatio", leftDockWidthRatio));
-        workspaceMixerWidthRatio = (float) juce::jlimit (0.46, 0.90, properties.getDoubleValue ("layoutWorkspaceMixerRatio", workspaceMixerWidthRatio));
-        workspaceBottomHeightRatio = (float) juce::jlimit (0.18, 0.70, properties.getDoubleValue ("layoutWorkspaceBottomRatio", workspaceBottomHeightRatio));
-        mixerPianoHeightRatio = (float) juce::jlimit (0.24, 0.72, properties.getDoubleValue ("layoutMixerPianoRatio", mixerPianoHeightRatio));
-        pianoStepHeightRatio = (float) juce::jlimit (0.30, 0.72, properties.getDoubleValue ("layoutPianoStepRatio", pianoStepHeightRatio));
-        mixerRackHeightRatio = (float) juce::jlimit (0.30, 0.80, properties.getDoubleValue ("layoutMixerRackRatio", mixerRackHeightRatio));
-        rackInspectorWidthRatio = (float) juce::jlimit (0.35, 0.78, properties.getDoubleValue ("layoutRackInspectorRatio", rackInspectorWidthRatio));
-        channelRackControlsHeightRatio = (float) juce::jlimit (0.18, 0.72, properties.getDoubleValue ("layoutRackControlsRatio", channelRackControlsHeightRatio));
-        windowPanelWorkspaceVisible = properties.getBoolValue ("windowPanelWorkspaceVisible", windowPanelWorkspaceVisible);
-        windowPanelMixerVisible = properties.getBoolValue ("windowPanelMixerVisible", windowPanelMixerVisible);
-        windowPanelPianoVisible = properties.getBoolValue ("windowPanelPianoVisible", windowPanelPianoVisible);
-        windowPanelArrangementVisible = properties.getBoolValue ("windowPanelArrangementVisible", windowPanelArrangementVisible);
-        windowPanelTrackVisible = properties.getBoolValue ("windowPanelTrackVisible", windowPanelTrackVisible);
-        windowPanelClipVisible = properties.getBoolValue ("windowPanelClipVisible", windowPanelClipVisible);
-        windowPanelMidiVisible = properties.getBoolValue ("windowPanelMidiVisible", windowPanelMidiVisible);
-        windowPanelAudioVisible = properties.getBoolValue ("windowPanelAudioVisible", windowPanelAudioVisible);
-        windowPanelFxVisible = properties.getBoolValue ("windowPanelFxVisible", windowPanelFxVisible);
-        windowPanelTrackMixerVisible = properties.getBoolValue ("windowPanelTrackMixerVisible", windowPanelTrackMixerVisible);
-        windowPanelMixerAreaVisible = properties.getBoolValue ("windowPanelMixerAreaVisible", windowPanelMixerAreaVisible);
-        windowPanelChannelRackVisible = properties.getBoolValue ("windowPanelChannelRackVisible", windowPanelChannelRackVisible);
-        windowPanelInspectorVisible = properties.getBoolValue ("windowPanelInspectorVisible", windowPanelInspectorVisible);
-        windowPanelPianoRollVisible = properties.getBoolValue ("windowPanelPianoRollVisible", windowPanelPianoRollVisible);
-        windowPanelStepSequencerVisible = properties.getBoolValue ("windowPanelStepSequencerVisible", windowPanelStepSequencerVisible);
-        uiDensityMode = getUiDensityModeForStorageValue (properties.getValue ("uiDensityMode",
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
+        leftDockWidthRatio = (float) juce::jlimit (0.12, 0.46, propertyFile.getDoubleValue ("layoutLeftDockRatio", leftDockWidthRatio));
+        workspaceMixerWidthRatio = (float) juce::jlimit (0.46, 0.90, propertyFile.getDoubleValue ("layoutWorkspaceMixerRatio", workspaceMixerWidthRatio));
+        workspaceBottomHeightRatio = (float) juce::jlimit (0.18, 0.70, propertyFile.getDoubleValue ("layoutWorkspaceBottomRatio", workspaceBottomHeightRatio));
+        mixerPianoHeightRatio = (float) juce::jlimit (0.24, 0.72, propertyFile.getDoubleValue ("layoutMixerPianoRatio", mixerPianoHeightRatio));
+        pianoStepHeightRatio = (float) juce::jlimit (0.30, 0.72, propertyFile.getDoubleValue ("layoutPianoStepRatio", pianoStepHeightRatio));
+        mixerRackHeightRatio = (float) juce::jlimit (0.30, 0.80, propertyFile.getDoubleValue ("layoutMixerRackRatio", mixerRackHeightRatio));
+        rackInspectorWidthRatio = (float) juce::jlimit (0.35, 0.78, propertyFile.getDoubleValue ("layoutRackInspectorRatio", rackInspectorWidthRatio));
+        channelRackControlsHeightRatio = (float) juce::jlimit (0.18, 0.72, propertyFile.getDoubleValue ("layoutRackControlsRatio", channelRackControlsHeightRatio));
+        windowPanelWorkspaceVisible = propertyFile.getBoolValue ("windowPanelWorkspaceVisible", windowPanelWorkspaceVisible);
+        windowPanelMixerVisible = propertyFile.getBoolValue ("windowPanelMixerVisible", windowPanelMixerVisible);
+        windowPanelPianoVisible = propertyFile.getBoolValue ("windowPanelPianoVisible", windowPanelPianoVisible);
+        windowPanelArrangementVisible = propertyFile.getBoolValue ("windowPanelArrangementVisible", windowPanelArrangementVisible);
+        windowPanelTrackVisible = propertyFile.getBoolValue ("windowPanelTrackVisible", windowPanelTrackVisible);
+        windowPanelClipVisible = propertyFile.getBoolValue ("windowPanelClipVisible", windowPanelClipVisible);
+        windowPanelMidiVisible = propertyFile.getBoolValue ("windowPanelMidiVisible", windowPanelMidiVisible);
+        windowPanelAudioVisible = propertyFile.getBoolValue ("windowPanelAudioVisible", windowPanelAudioVisible);
+        windowPanelFxVisible = propertyFile.getBoolValue ("windowPanelFxVisible", windowPanelFxVisible);
+        windowPanelTrackMixerVisible = propertyFile.getBoolValue ("windowPanelTrackMixerVisible", windowPanelTrackMixerVisible);
+        windowPanelMixerAreaVisible = propertyFile.getBoolValue ("windowPanelMixerAreaVisible", windowPanelMixerAreaVisible);
+        windowPanelChannelRackVisible = propertyFile.getBoolValue ("windowPanelChannelRackVisible", windowPanelChannelRackVisible);
+        windowPanelInspectorVisible = propertyFile.getBoolValue ("windowPanelInspectorVisible", windowPanelInspectorVisible);
+        windowPanelPianoRollVisible = propertyFile.getBoolValue ("windowPanelPianoRollVisible", windowPanelPianoRollVisible);
+        windowPanelStepSequencerVisible = propertyFile.getBoolValue ("windowPanelStepSequencerVisible", windowPanelStepSequencerVisible);
+        uiDensityMode = getUiDensityModeForStorageValue (propertyFile.getValue ("uiDensityMode",
                                                                                 getUiDensityStorageValue (UiDensityMode::compact)));
     }
 
@@ -8107,8 +8107,8 @@ void BeatMakerNoRecord::setLeftDockPanelMode (LeftDockPanelMode mode, bool persi
 
     if (persist)
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
-        properties.setValue ("leftDockPanelMode", getLeftDockPanelModeStorageValue (mode));
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
+        propertyFile.setValue ("leftDockPanelMode", getLeftDockPanelModeStorageValue (mode));
     }
 
     if (announceStatus)
@@ -8155,29 +8155,29 @@ void BeatMakerNoRecord::applyBeatmakerTrackAreaFocusLayout (bool persist, bool a
 
     if (persist)
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
-        properties.setValue ("layoutLeftDockRatio", leftDockWidthRatio);
-        properties.setValue ("layoutWorkspaceMixerRatio", workspaceMixerWidthRatio);
-        properties.setValue ("layoutWorkspaceBottomRatio", workspaceBottomHeightRatio);
-        properties.setValue ("layoutMixerPianoRatio", mixerPianoHeightRatio);
-        properties.setValue ("windowPanelWorkspaceVisible", windowPanelWorkspaceVisible);
-        properties.setValue ("windowPanelMixerVisible", windowPanelMixerVisible);
-        properties.setValue ("windowPanelPianoVisible", windowPanelPianoVisible);
-        properties.setValue ("windowPanelArrangementVisible", windowPanelArrangementVisible);
-        properties.setValue ("windowPanelTrackVisible", windowPanelTrackVisible);
-        properties.setValue ("windowPanelClipVisible", windowPanelClipVisible);
-        properties.setValue ("windowPanelMidiVisible", windowPanelMidiVisible);
-        properties.setValue ("windowPanelAudioVisible", windowPanelAudioVisible);
-        properties.setValue ("windowPanelFxVisible", windowPanelFxVisible);
-        properties.setValue ("windowPanelTrackMixerVisible", windowPanelTrackMixerVisible);
-        properties.setValue ("windowPanelMixerAreaVisible", windowPanelMixerAreaVisible);
-        properties.setValue ("windowPanelChannelRackVisible", windowPanelChannelRackVisible);
-        properties.setValue ("windowPanelInspectorVisible", windowPanelInspectorVisible);
-        properties.setValue ("windowPanelPianoRollVisible", windowPanelPianoRollVisible);
-        properties.setValue ("windowPanelStepSequencerVisible", windowPanelStepSequencerVisible);
-        properties.setValue ("windowFloatWorkspace", false);
-        properties.setValue ("windowFloatMixer", false);
-        properties.setValue ("windowFloatPiano", false);
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
+        propertyFile.setValue ("layoutLeftDockRatio", leftDockWidthRatio);
+        propertyFile.setValue ("layoutWorkspaceMixerRatio", workspaceMixerWidthRatio);
+        propertyFile.setValue ("layoutWorkspaceBottomRatio", workspaceBottomHeightRatio);
+        propertyFile.setValue ("layoutMixerPianoRatio", mixerPianoHeightRatio);
+        propertyFile.setValue ("windowPanelWorkspaceVisible", windowPanelWorkspaceVisible);
+        propertyFile.setValue ("windowPanelMixerVisible", windowPanelMixerVisible);
+        propertyFile.setValue ("windowPanelPianoVisible", windowPanelPianoVisible);
+        propertyFile.setValue ("windowPanelArrangementVisible", windowPanelArrangementVisible);
+        propertyFile.setValue ("windowPanelTrackVisible", windowPanelTrackVisible);
+        propertyFile.setValue ("windowPanelClipVisible", windowPanelClipVisible);
+        propertyFile.setValue ("windowPanelMidiVisible", windowPanelMidiVisible);
+        propertyFile.setValue ("windowPanelAudioVisible", windowPanelAudioVisible);
+        propertyFile.setValue ("windowPanelFxVisible", windowPanelFxVisible);
+        propertyFile.setValue ("windowPanelTrackMixerVisible", windowPanelTrackMixerVisible);
+        propertyFile.setValue ("windowPanelMixerAreaVisible", windowPanelMixerAreaVisible);
+        propertyFile.setValue ("windowPanelChannelRackVisible", windowPanelChannelRackVisible);
+        propertyFile.setValue ("windowPanelInspectorVisible", windowPanelInspectorVisible);
+        propertyFile.setValue ("windowPanelPianoRollVisible", windowPanelPianoRollVisible);
+        propertyFile.setValue ("windowPanelStepSequencerVisible", windowPanelStepSequencerVisible);
+        propertyFile.setValue ("windowFloatWorkspace", false);
+        propertyFile.setValue ("windowFloatMixer", false);
+        propertyFile.setValue ("windowFloatPiano", false);
     }
 
     resized();
@@ -8246,8 +8246,8 @@ void BeatMakerNoRecord::setPianoEditorLayoutMode (PianoEditorLayoutMode mode, bo
 
     if (persist)
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
-        properties.setValue ("pianoEditorLayoutMode", getPianoEditorLayoutModeStorageValue (mode));
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
+        propertyFile.setValue ("pianoEditorLayoutMode", getPianoEditorLayoutModeStorageValue (mode));
     }
 
     if (announceStatus)
@@ -8368,8 +8368,8 @@ void BeatMakerNoRecord::setUiDensityMode (UiDensityMode mode, bool persist, bool
 
     if (persist)
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
-        properties.setValue ("uiDensityMode", getUiDensityStorageValue (uiDensityMode));
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
+        propertyFile.setValue ("uiDensityMode", getUiDensityStorageValue (uiDensityMode));
     }
 
     applyUiDensityToControlSizing();
@@ -12707,7 +12707,7 @@ void BeatMakerNoRecord::handleMidiPianoRollMouseUp (const juce::MouseEvent& e)
 
 void BeatMakerNoRecord::handleMidiPianoRollMouseMove (const juce::MouseEvent& e, int width, int height)
 {
-    juce::MouseCursor cursor = juce::MouseCursor::NormalCursor;
+    juce::MouseCursor mouseCursor = juce::MouseCursor::NormalCursor;
     const auto tool = getTimelineEditTool();
     auto* midiClip = getSelectedMidiClip();
     const auto layout = getPianoRollGeometry ({ 0, 0, width, height });
@@ -12726,7 +12726,7 @@ void BeatMakerNoRecord::handleMidiPianoRollMouseMove (const juce::MouseEvent& e,
 
     if (midiClip == nullptr || edit == nullptr || width <= 0 || height <= 0 || layout.gridArea.isEmpty())
     {
-        midiPianoRoll.setMouseCursor (cursor);
+        midiPianoRoll.setMouseCursor (mouseCursor);
         return;
     }
 
@@ -12739,26 +12739,26 @@ void BeatMakerNoRecord::handleMidiPianoRollMouseMove (const juce::MouseEvent& e,
         if (headerTabs.pianoTab.contains (e.getPosition())
             || headerTabs.stepTab.contains (e.getPosition())
             || getPianoRollToolChipAtPoint (headerTabs.infoArea, e.getPosition(), headerTool))
-            cursor = juce::MouseCursor::PointingHandCursor;
+            mouseCursor = juce::MouseCursor::PointingHandCursor;
         else if (layout.rulerArea.contains (e.getPosition()))
-            cursor = juce::MouseCursor::PointingHandCursor;
+            mouseCursor = juce::MouseCursor::PointingHandCursor;
         else if (layout.keyboardArea.contains (e.getPosition()))
-            cursor = juce::MouseCursor::PointingHandCursor;
+            mouseCursor = juce::MouseCursor::PointingHandCursor;
         else if (layout.frame.contains (e.getPosition()) && (e.mods.isMiddleButtonDown() || e.mods.isCommandDown()))
-            cursor = juce::MouseCursor::DraggingHandCursor;
+            mouseCursor = juce::MouseCursor::DraggingHandCursor;
 
-        midiPianoRoll.setMouseCursor (cursor);
+        midiPianoRoll.setMouseCursor (mouseCursor);
         return;
     }
 
     const auto gridPos = e.getPosition() - layout.gridArea.getPosition();
 
     if (tool == TimelineEditTool::pencil || tool == TimelineEditTool::scissors)
-        cursor = juce::MouseCursor::CrosshairCursor;
+        mouseCursor = juce::MouseCursor::CrosshairCursor;
     else if (tool == TimelineEditTool::resize)
-        cursor = juce::MouseCursor::LeftRightResizeCursor;
+        mouseCursor = juce::MouseCursor::LeftRightResizeCursor;
     else if (e.mods.isMiddleButtonDown() || e.mods.isCommandDown())
-        cursor = juce::MouseCursor::DraggingHandCursor;
+        mouseCursor = juce::MouseCursor::DraggingHandCursor;
 
     if (auto* note = getPianoRollNoteAt (gridPos.x, gridPos.y, layout.gridArea.getWidth(), layout.gridArea.getHeight()))
     {
@@ -12768,20 +12768,20 @@ void BeatMakerNoRecord::handleMidiPianoRollMouseMove (const juce::MouseEvent& e,
                            || gridPos.x >= noteRect.getRight() - resizeHandleWidth;
 
         if (tool == TimelineEditTool::scissors)
-            cursor = juce::MouseCursor::CrosshairCursor;
+            mouseCursor = juce::MouseCursor::CrosshairCursor;
         else if (e.mods.isAltDown())
-            cursor = juce::MouseCursor::CopyingCursor;
+            mouseCursor = juce::MouseCursor::CopyingCursor;
         else if (tool == TimelineEditTool::resize || nearEdge)
-            cursor = juce::MouseCursor::LeftRightResizeCursor;
+            mouseCursor = juce::MouseCursor::LeftRightResizeCursor;
         else if (tool == TimelineEditTool::select && e.mods.isShiftDown())
-            cursor = juce::MouseCursor::UpDownResizeCursor;
+            mouseCursor = juce::MouseCursor::UpDownResizeCursor;
         else if (tool == TimelineEditTool::pencil)
-            cursor = juce::MouseCursor::CrosshairCursor;
+            mouseCursor = juce::MouseCursor::CrosshairCursor;
         else
-            cursor = juce::MouseCursor::DraggingHandCursor;
+            mouseCursor = juce::MouseCursor::DraggingHandCursor;
     }
 
-    midiPianoRoll.setMouseCursor (cursor);
+    midiPianoRoll.setMouseCursor (mouseCursor);
 }
 
 void BeatMakerNoRecord::handleMidiPianoRollMouseWheel (const juce::MouseEvent& e,

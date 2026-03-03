@@ -987,10 +987,10 @@ BeatMakerNoRecord::BeatMakerNoRecord()
         if (owner == nullptr)
             return;
 
-        auto& properties = owner->engine.getPropertyStorage().getPropertiesFile();
-        const bool floatWorkspace = properties.getBoolValue ("windowFloatWorkspace", false);
-        const bool floatMixer = properties.getBoolValue ("windowFloatMixer", false);
-        const bool floatPiano = properties.getBoolValue ("windowFloatPiano", false);
+        auto& propertyFile = owner->engine.getPropertyStorage().getPropertiesFile();
+        const bool floatWorkspace = propertyFile.getBoolValue ("windowFloatWorkspace", false);
+        const bool floatMixer = propertyFile.getBoolValue ("windowFloatMixer", false);
+        const bool floatPiano = propertyFile.getBoolValue ("windowFloatPiano", false);
 
         if (floatWorkspace)
             owner->windowPanelWorkspaceVisible = true;
@@ -1006,9 +1006,9 @@ BeatMakerNoRecord::BeatMakerNoRecord()
         if (floatPiano && ! owner->isSectionFloating (FloatSection::piano))
             owner->setSectionFloating (FloatSection::piano, true);
 
-        auto restoreDetachedPanel = [owner, &properties] (DetachedPanel panel, const char* propertyKey, bool& panelVisibleFlag)
+        auto restoreDetachedPanel = [owner, &propertyFile] (DetachedPanel panel, const char* propertyKey, bool& panelVisibleFlag)
         {
-            if (! properties.getBoolValue (propertyKey, false))
+            if (! propertyFile.getBoolValue (propertyKey, false))
                 return;
 
             panelVisibleFlag = true;
@@ -1079,15 +1079,15 @@ void BeatMakerNoRecord::setupCallbacks()
 
     auto persistLayoutRatios = [this]
     {
-        auto& properties = engine.getPropertyStorage().getPropertiesFile();
-        properties.setValue ("layoutLeftDockRatio", leftDockWidthRatio);
-        properties.setValue ("layoutWorkspaceMixerRatio", workspaceMixerWidthRatio);
-        properties.setValue ("layoutWorkspaceBottomRatio", workspaceBottomHeightRatio);
-        properties.setValue ("layoutMixerPianoRatio", mixerPianoHeightRatio);
-        properties.setValue ("layoutPianoStepRatio", pianoStepHeightRatio);
-        properties.setValue ("layoutMixerRackRatio", mixerRackHeightRatio);
-        properties.setValue ("layoutRackInspectorRatio", rackInspectorWidthRatio);
-        properties.setValue ("layoutRackControlsRatio", channelRackControlsHeightRatio);
+        auto& propertyFile = engine.getPropertyStorage().getPropertiesFile();
+        propertyFile.setValue ("layoutLeftDockRatio", leftDockWidthRatio);
+        propertyFile.setValue ("layoutWorkspaceMixerRatio", workspaceMixerWidthRatio);
+        propertyFile.setValue ("layoutWorkspaceBottomRatio", workspaceBottomHeightRatio);
+        propertyFile.setValue ("layoutMixerPianoRatio", mixerPianoHeightRatio);
+        propertyFile.setValue ("layoutPianoStepRatio", pianoStepHeightRatio);
+        propertyFile.setValue ("layoutMixerRackRatio", mixerRackHeightRatio);
+        propertyFile.setValue ("layoutRackInspectorRatio", rackInspectorWidthRatio);
+        propertyFile.setValue ("layoutRackControlsRatio", channelRackControlsHeightRatio);
     };
 
     auto relayoutMixerSection = [this]

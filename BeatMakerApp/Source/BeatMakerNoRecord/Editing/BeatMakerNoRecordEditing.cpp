@@ -3484,8 +3484,8 @@ void BeatMakerNoRecord::insertBarAtPlayhead()
     if (edit == nullptr)
         return;
 
-    const auto cursor = edit->getTransport().getPosition();
-    te::insertSpaceIntoEdit (*edit, { cursor, getBarDurationAt (cursor) });
+    const auto playheadPosition = edit->getTransport().getPosition();
+    te::insertSpaceIntoEdit (*edit, { playheadPosition, getBarDurationAt (playheadPosition) });
     setStatus ("Inserted one bar at playhead.");
 }
 
@@ -3494,7 +3494,7 @@ void BeatMakerNoRecord::deleteBarAtPlayhead()
     if (edit == nullptr)
         return;
 
-    const auto cursor = edit->getTransport().getPosition();
+    const auto playheadPosition = edit->getTransport().getPosition();
     if (! confirmDestructiveAction ("Delete Bar", "Delete one bar at the current playhead position?"))
     {
         setStatus ("Delete bar cancelled.");
@@ -3502,7 +3502,7 @@ void BeatMakerNoRecord::deleteBarAtPlayhead()
     }
 
     te::deleteRegionOfTracks (*edit,
-                              { cursor, getBarDurationAt (cursor) },
+                              { playheadPosition, getBarDurationAt (playheadPosition) },
                               false,
                               te::CloseGap::yes,
                               &selectionManager);
