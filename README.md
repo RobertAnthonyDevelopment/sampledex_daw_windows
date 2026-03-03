@@ -6,9 +6,10 @@ This folder is a clean, production-style layout where DAW app source is separate
 
 - `BeatMakerApp/Source/BeatMakerNoRecord` - Your DAW application code
 - `BeatMakerApp/Source/common` - Shared example utility components used by the DAW UI
-- `BeatMakerApp/BundledSynths/SampledexNovaSynth` - Bundled synth plugin source
 - `ThirdParty/tracktion_engine` - Tracktion Engine dependency sources (modules + CMake support)
 - `ThirdParty/JUCE` - JUCE source used by CMake when available locally
+
+The DAW is configured for third-party AU/VST3 instruments and effects only (no internal or bundled instruments/effects).
 
 ## Build
 

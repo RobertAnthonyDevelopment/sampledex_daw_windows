@@ -807,6 +807,7 @@ BeatMakerNoRecord::BeatMakerNoRecord()
                                          &topMenuBar,
                                          &newEditButton, &openEditButton, &saveButton, &saveAsButton,
                                          &undoButton, &redoButton, &helpButton,
+                                         &beatmakerSpaceButton, &startBeatQuickButton,
                                          &focusSelectionButton, &centerPlayheadButton, &fitProjectButton,
                                          &playPauseButton, &stopButton, &returnToStartButton, &transportLoopButton,
                                          &setLoopToSelectionButton, &zoomInButton, &zoomOutButton, &zoomResetButton,
@@ -816,12 +817,12 @@ BeatMakerNoRecord::BeatMakerNoRecord()
                                          &addSectionButton, &prevSectionButton, &nextSectionButton, &loopSectionButton,
                                          &addTrackButton, &addMidiTrackButton,
                                          &moveTrackUpButton, &moveTrackDownButton, &duplicateTrackButton, &colorTrackButton,
-                                         &renameTrackButton, &addFloatingSynthTrackButton,
+                                         &renameTrackButton, &addFloatingInstrumentTrackButton,
                                          &importAudioButton, &importMidiButton, &createMidiClipButton,
                                          &editToolLabel, &editToolSelectButton, &editToolPencilButton, &editToolScissorsButton, &editToolResizeButton,
                                          &leftDockPanelTabs,
                                          &leftDockPanelModeLabel, &leftDockPanelModeBox,
-                                         &defaultSynthModeLabel, &defaultSynthModeBox,
+                                         &defaultInstrumentModeLabel, &defaultInstrumentModeBox,
                                          &copyButton, &cutButton, &pasteButton, &deleteButton, &duplicateButton,
                                          &splitButton, &trimStartButton, &trimEndButton,
                                          &moveStartToCursorButton, &moveEndToCursorButton,
@@ -855,8 +856,6 @@ BeatMakerNoRecord::BeatMakerNoRecord()
                                          &audioAlignToBarButton, &audioMake2BarLoopButton, &audioMake4BarLoopButton, &audioFillTransportLoopButton,
                                          &gridLabel, &gridBox,
                                          &fxChainLabel, &fxChainBox, &fxRefreshButton, &fxScanButton, &fxScanSkippedButton, &fxPrepPlaybackButton,
-                                         &fxAddSamplerButton, &fxAddSynthButton, &fxAddEQButton, &fxAddCompButton,
-                                         &fxAddReverbButton, &fxAddDelayButton,
                                          &fxAddExternalInstrumentButton, &fxAddExternalButton, &fxOpenEditorButton,
                                          &fxMoveUpButton, &fxMoveDownButton, &fxBypassButton, &fxDeleteButton,
                                          &trackMuteButton, &trackSoloButton,
@@ -864,32 +863,13 @@ BeatMakerNoRecord::BeatMakerNoRecord()
                                          &trackVolumeSlider, &trackPanSlider, &tempoSlider,
                                          &editNameLabel, &transportInfoLabel, &workflowStateLabel, &selectedTrackLabel, &statusLabel, &contextHintLabel,
                                          &trackHeightLabel, &trackHeightSlider, &leftDockScrollSlider,
+                                         &horizontalZoomSlider, &verticalZoomSlider,
                                          &horizontalScrollSlider, &verticalScrollSlider, &timelineRuler, &trackAreaToolbar, &mixerToolsToolbar, &mixerArea,
                                          &leftDockSplitter, &workspaceMixerSplitter, &workspaceBottomSplitter, &mixerPianoSplitter,
-                                         &channelRackGroup, &inspectorGroup, &builtInSynthGroup,
                                          &channelRackTrackLabel, &channelRackTrackBox,
                                          &channelRackPluginLabel, &channelRackPluginBox,
                                          &channelRackAddInstrumentButton, &channelRackAddFxButton, &channelRackOpenPluginButton,
                                          &inspectorTrackNameLabel, &inspectorRouteLabel, &inspectorPluginLabel, &inspectorMeterLabel,
-                                         &builtInSynthTargetLabel,
-                                         &builtInSynthPresetInitButton, &builtInSynthPresetWarmPadButton,
-                                         &builtInSynthPresetPunchBassButton, &builtInSynthPresetBrightPluckButton,
-                                         &builtInSynthCutoffLabel, &builtInSynthCutoffSlider,
-                                         &builtInSynthResonanceLabel, &builtInSynthResonanceSlider,
-                                         &builtInSynthEnvLabel, &builtInSynthEnvSlider,
-                                         &builtInSynthDriveLabel, &builtInSynthDriveSlider,
-                                         &builtInSynthAttackLabel, &builtInSynthAttackSlider,
-                                         &builtInSynthReleaseLabel, &builtInSynthReleaseSlider,
-                                         &builtInSynthReverbLabel, &builtInSynthReverbSlider,
-                                         &builtInSynthDelayLabel, &builtInSynthDelaySlider,
-                                         &builtInSynthOsc1Label, &builtInSynthOsc1Slider,
-                                         &builtInSynthOsc2Label, &builtInSynthOsc2Slider,
-                                         &builtInSynthOsc3Label, &builtInSynthOsc3Slider,
-                                         &builtInSynthOsc4Label, &builtInSynthOsc4Slider,
-                                         &builtInSynthUnisonLabel, &builtInSynthUnisonSlider,
-                                         &builtInSynthWidthLabel, &builtInSynthWidthSlider,
-                                         &builtInSynthChorusLabel, &builtInSynthChorusSlider,
-                                         &builtInSynthMasterLabel, &builtInSynthMasterSlider,
                                          &pianoFloatToggleButton, &pianoEnsureInstrumentButton,
                                          &pianoOpenInstrumentButton, &pianoAlwaysOnTopButton, &pianoEditorModeTabs,
                                          &stepSequencerGroup, &stepSequencer, &pianoRollToolbar, &midiPianoRoll });
@@ -903,6 +883,8 @@ BeatMakerNoRecord::BeatMakerNoRecord()
     workspaceSection.addAndMakeVisible (workspaceGroup);
     workspaceSection.addAndMakeVisible (timelineRuler);
     workspaceSection.addAndMakeVisible (trackAreaToolbar);
+    workspaceSection.addAndMakeVisible (horizontalZoomSlider);
+    workspaceSection.addAndMakeVisible (verticalZoomSlider);
     workspaceSection.addAndMakeVisible (horizontalScrollSlider);
     workspaceSection.addAndMakeVisible (verticalScrollSlider);
 
@@ -915,7 +897,6 @@ BeatMakerNoRecord::BeatMakerNoRecord()
     mixerSection.addAndMakeVisible (rackInspectorSplitter);
     mixerSection.addAndMakeVisible (channelRackControlsSplitter);
     mixerSection.addAndMakeVisible (inspectorGroup);
-    mixerSection.addAndMakeVisible (builtInSynthGroup);
     mixerSection.addAndMakeVisible (channelRackTrackLabel);
     mixerSection.addAndMakeVisible (channelRackTrackBox);
     mixerSection.addAndMakeVisible (channelRackPluginLabel);
@@ -927,43 +908,6 @@ BeatMakerNoRecord::BeatMakerNoRecord()
     mixerSection.addAndMakeVisible (inspectorRouteLabel);
     mixerSection.addAndMakeVisible (inspectorPluginLabel);
     mixerSection.addAndMakeVisible (inspectorMeterLabel);
-    mixerSection.addAndMakeVisible (builtInSynthTargetLabel);
-    mixerSection.addAndMakeVisible (builtInSynthPresetInitButton);
-    mixerSection.addAndMakeVisible (builtInSynthPresetWarmPadButton);
-    mixerSection.addAndMakeVisible (builtInSynthPresetPunchBassButton);
-    mixerSection.addAndMakeVisible (builtInSynthPresetBrightPluckButton);
-    mixerSection.addAndMakeVisible (builtInSynthCutoffLabel);
-    mixerSection.addAndMakeVisible (builtInSynthCutoffSlider);
-    mixerSection.addAndMakeVisible (builtInSynthResonanceLabel);
-    mixerSection.addAndMakeVisible (builtInSynthResonanceSlider);
-    mixerSection.addAndMakeVisible (builtInSynthEnvLabel);
-    mixerSection.addAndMakeVisible (builtInSynthEnvSlider);
-    mixerSection.addAndMakeVisible (builtInSynthDriveLabel);
-    mixerSection.addAndMakeVisible (builtInSynthDriveSlider);
-    mixerSection.addAndMakeVisible (builtInSynthAttackLabel);
-    mixerSection.addAndMakeVisible (builtInSynthAttackSlider);
-    mixerSection.addAndMakeVisible (builtInSynthReleaseLabel);
-    mixerSection.addAndMakeVisible (builtInSynthReleaseSlider);
-    mixerSection.addAndMakeVisible (builtInSynthReverbLabel);
-    mixerSection.addAndMakeVisible (builtInSynthReverbSlider);
-    mixerSection.addAndMakeVisible (builtInSynthDelayLabel);
-    mixerSection.addAndMakeVisible (builtInSynthDelaySlider);
-    mixerSection.addAndMakeVisible (builtInSynthOsc1Label);
-    mixerSection.addAndMakeVisible (builtInSynthOsc1Slider);
-    mixerSection.addAndMakeVisible (builtInSynthOsc2Label);
-    mixerSection.addAndMakeVisible (builtInSynthOsc2Slider);
-    mixerSection.addAndMakeVisible (builtInSynthOsc3Label);
-    mixerSection.addAndMakeVisible (builtInSynthOsc3Slider);
-    mixerSection.addAndMakeVisible (builtInSynthOsc4Label);
-    mixerSection.addAndMakeVisible (builtInSynthOsc4Slider);
-    mixerSection.addAndMakeVisible (builtInSynthUnisonLabel);
-    mixerSection.addAndMakeVisible (builtInSynthUnisonSlider);
-    mixerSection.addAndMakeVisible (builtInSynthWidthLabel);
-    mixerSection.addAndMakeVisible (builtInSynthWidthSlider);
-    mixerSection.addAndMakeVisible (builtInSynthChorusLabel);
-    mixerSection.addAndMakeVisible (builtInSynthChorusSlider);
-    mixerSection.addAndMakeVisible (builtInSynthMasterLabel);
-    mixerSection.addAndMakeVisible (builtInSynthMasterSlider);
 
     pianoSection.addAndMakeVisible (pianoRollGroup);
     pianoSection.addAndMakeVisible (stepSequencerGroup);
@@ -1044,9 +988,9 @@ BeatMakerNoRecord::BeatMakerNoRecord()
             return;
 
         auto& properties = owner->engine.getPropertyStorage().getPropertiesFile();
-        const bool floatWorkspace = properties.getBoolValue ("windowFloatWorkspace", true);
-        const bool floatMixer = properties.getBoolValue ("windowFloatMixer", true);
-        const bool floatPiano = properties.getBoolValue ("windowFloatPiano", true);
+        const bool floatWorkspace = properties.getBoolValue ("windowFloatWorkspace", false);
+        const bool floatMixer = properties.getBoolValue ("windowFloatMixer", false);
+        const bool floatPiano = properties.getBoolValue ("windowFloatPiano", false);
 
         if (floatWorkspace)
             owner->windowPanelWorkspaceVisible = true;
@@ -1119,348 +1063,17 @@ BeatMakerNoRecord::~BeatMakerNoRecord()
 
 void BeatMakerNoRecord::setupCallbacks()
 {
-    newEditButton.onClick = [this] { createNewEdit (false); };
-    openEditButton.onClick = [this] { openEdit(); };
-    saveButton.onClick = [this] { saveEdit(); };
-    saveAsButton.onClick = [this] { saveEditAs(); };
-    undoButton.onClick = [this] { if (edit != nullptr) edit->getUndoManager().undo(); };
-    redoButton.onClick = [this] { if (edit != nullptr) edit->getUndoManager().redo(); };
-    helpButton.onClick = [this] { showShortcutOverlay(); };
-    focusSelectionButton.onClick = [this] { focusSelectedClipInView(); };
-    centerPlayheadButton.onClick = [this] { centerPlayheadInView(); };
-    fitProjectButton.onClick = [this] { fitProjectInView(); };
+    setupSessionHeaderCallbacks();
+    setupArrangementCallbacks();
+    setupTrackCallbacks();
+    setupMidiCallbacks();
+    setupFxCallbacks();
+    setupMixerCallbacks();
+    setupPianoCallbacks();
 
-    playPauseButton.onClick = [this]
-    {
-        if (edit != nullptr)
-        {
-            if (! edit->getTransport().isPlaying())
-                prepareEditForPluginPlayback (true);
-
-            EngineHelpers::togglePlay (*edit);
-        }
-    };
-    stopButton.onClick = [this]
-    {
-        if (edit != nullptr)
-            edit->getTransport().stop (false, false);
-    };
-    returnToStartButton.onClick = [this]
-    {
-        if (edit != nullptr)
-            edit->getTransport().setPosition (te::TimePosition::fromSeconds (0.0));
-    };
-    transportLoopButton.onClick = [this] { toggleTransportLooping(); };
-    setLoopToSelectionButton.onClick = [this] { setTransportLoopToSelectedClip(); };
-    jumpPrevBarButton.onClick = [this] { jumpByBar (false); };
-    jumpNextBarButton.onClick = [this] { jumpByBar (true); };
-    zoomInButton.onClick = [this] { zoomTimeline (0.7); };
-    zoomOutButton.onClick = [this] { zoomTimeline (1.4); };
-    zoomResetButton.onClick = [this] { resetZoom(); };
-    zoomVerticalInButton.onClick = [this]
-    {
-        const double nextHeight = juce::jlimit (trackHeightSlider.getMinimum(),
-                                                trackHeightSlider.getMaximum(),
-                                                trackHeightSlider.getValue() * 1.12);
-        trackHeightSlider.setValue (nextHeight);
-    };
-    zoomVerticalOutButton.onClick = [this]
-    {
-        const double nextHeight = juce::jlimit (trackHeightSlider.getMinimum(),
-                                                trackHeightSlider.getMaximum(),
-                                                trackHeightSlider.getValue() * 0.89);
-        trackHeightSlider.setValue (nextHeight);
-    };
-    zoomVerticalResetButton.onClick = [this]
-    {
-        trackHeightSlider.setValue (58.0);
-    };
-    showMarkerTrackButton.onClick = [this] { toggleMarkerTrackVisibility(); };
-    showArrangerTrackButton.onClick = [this] { toggleArrangerTrackVisibility(); };
-    addMarkerButton.onClick = [this] { addMarkerAtPlayhead(); };
-    prevMarkerButton.onClick = [this] { jumpToMarker (false); };
-    nextMarkerButton.onClick = [this] { jumpToMarker (true); };
-    loopMarkersButton.onClick = [this] { setLoopBetweenNearestMarkers(); };
-    addSectionButton.onClick = [this] { addArrangerSectionAtPlayhead(); };
-    prevSectionButton.onClick = [this] { jumpToArrangerSection (false); };
-    nextSectionButton.onClick = [this] { jumpToArrangerSection (true); };
-    loopSectionButton.onClick = [this] { setLoopToCurrentArrangerSection(); };
-
-    addTrackButton.onClick = [this] { addTrack(); };
-    addMidiTrackButton.onClick = [this] { addMidiTrack(); };
-    moveTrackUpButton.onClick = [this] { moveSelectedTrackVertically (false); };
-    moveTrackDownButton.onClick = [this] { moveSelectedTrackVertically (true); };
-    duplicateTrackButton.onClick = [this] { duplicateSelectedTrack(); };
-    colorTrackButton.onClick = [this] { cycleSelectedTrackColour(); };
-    renameTrackButton.onClick = [this] { renameSelectedTrack(); };
-    addFloatingSynthTrackButton.onClick = [this] { addFloatingSynthTrack(); };
-    importAudioButton.onClick = [this] { importAudioClip(); };
-    importMidiButton.onClick = [this] { importMidiClip(); };
-    createMidiClipButton.onClick = [this] { createMidiClip(); };
-    pianoFloatToggleButton.setClickingTogglesState (true);
-    pianoFloatToggleButton.onClick = [this]
-    {
-        toggleSectionFloating (FloatSection::piano);
-        refreshPianoFloatingWindowUi();
-    };
-    pianoEnsureInstrumentButton.onClick = [this]
-    {
-        if (edit == nullptr)
-            return;
-
-        auto* track = [this] () -> te::AudioTrack*
-        {
-            if (auto* midiClip = getSelectedMidiClip())
-                if (auto* ownerTrack = dynamic_cast<te::AudioTrack*> (midiClip->getTrack()))
-                    return ownerTrack;
-
-            return getSelectedTrackOrFirst();
-        }();
-
-        if (track == nullptr)
-        {
-            setStatus ("Select a MIDI clip or track first.");
-            return;
-        }
-
-        const bool changed = ensureTrackHasInstrumentForMidiPlayback (*track);
-        if (! changed && trackHasInstrumentPlugin (*track))
-            setStatus ("Instrument already ready for MIDI playback on " + track->getName() + ".");
-
-        refreshPianoFloatingWindowUi();
-    };
-    pianoOpenInstrumentButton.onClick = [this]
-    {
-        if (edit == nullptr)
-            return;
-
-        auto* track = [this] () -> te::AudioTrack*
-        {
-            if (auto* midiClip = getSelectedMidiClip())
-                if (auto* ownerTrack = dynamic_cast<te::AudioTrack*> (midiClip->getTrack()))
-                    return ownerTrack;
-
-            return getSelectedTrackOrFirst();
-        }();
-
-        if (track == nullptr)
-        {
-            setStatus ("Select a MIDI clip or track first.");
-            return;
-        }
-
-        ensureTrackHasInstrumentForMidiPlayback (*track);
-
-        for (auto* plugin : track->pluginList.getPlugins())
-        {
-            if (plugin != nullptr && plugin->isSynth() && plugin->isEnabled())
-            {
-                plugin->showWindowExplicitly();
-                setStatus ("Opened instrument UI: " + plugin->getName());
-                refreshPianoFloatingWindowUi();
-                return;
-            }
-        }
-
-        setStatus ("No instrument UI available on selected track.");
-    };
-    pianoAlwaysOnTopButton.onClick = [this]
-    {
-        pianoFloatingAlwaysOnTop = pianoAlwaysOnTopButton.getToggleState();
-        engine.getPropertyStorage().getPropertiesFile().setValue ("pianoFloatAlwaysOnTop", pianoFloatingAlwaysOnTop);
-
-        if (pianoFloatingWindow != nullptr)
-        {
-            pianoFloatingWindow->setAlwaysOnTop (pianoFloatingAlwaysOnTop);
-            pianoFloatingWindow->toFront (true);
-        }
-
-        refreshPianoFloatingWindowUi();
-    };
-    editToolSelectButton.setClickingTogglesState (true);
-    editToolPencilButton.setClickingTogglesState (true);
-    editToolScissorsButton.setClickingTogglesState (true);
-    editToolResizeButton.setClickingTogglesState (true);
-    editToolSelectButton.onClick = [this] { setTimelineEditToolFromUi (TimelineEditTool::select); };
-    editToolPencilButton.onClick = [this] { setTimelineEditToolFromUi (TimelineEditTool::pencil); };
-    editToolScissorsButton.onClick = [this] { setTimelineEditToolFromUi (TimelineEditTool::scissors); };
-    editToolResizeButton.onClick = [this] { setTimelineEditToolFromUi (TimelineEditTool::resize); };
-    defaultSynthModeBox.onChange = [this]
-    {
-        if (defaultSynthModeBox.getSelectedId() <= 0)
-            return;
-
-        const auto selectedMode = getDefaultSynthModeSelection();
-        engine.getPropertyStorage().getPropertiesFile().setValue ("defaultSynthMode",
-                                                                  getDefaultSynthModeStorageValue (selectedMode));
-        setStatus ("Default synth mode set to " + getDefaultSynthModeDisplayName (selectedMode) + ".");
-    };
-    leftDockPanelModeBox.onChange = [this]
-    {
-        if (leftDockPanelModeBox.getSelectedId() <= 0)
-            return;
-
-        setLeftDockPanelMode (getLeftDockPanelModeSelection(), true, true);
-    };
-
-    copyButton.onClick = [this] { copySelection(); };
-    cutButton.onClick = [this] { cutSelection(); };
-    pasteButton.onClick = [this] { pasteSelection(); };
-    deleteButton.onClick = [this] { deleteSelectedItem(); };
-    duplicateButton.onClick = [this] { duplicateSelectedClip(); };
-    splitButton.onClick = [this] { splitSelectedClipAtPlayhead(); };
-    trimStartButton.onClick = [this] { trimSelectedClipStartToPlayhead(); };
-    trimEndButton.onClick = [this] { trimSelectedClipEndToPlayhead(); };
-    moveStartToCursorButton.onClick = [this] { moveSelectedClipBoundaryToCursor (true); };
-    moveEndToCursorButton.onClick = [this] { moveSelectedClipBoundaryToCursor (false); };
-    nudgeLeftButton.onClick = [this] { nudgeSelectedClip (false); };
-    nudgeRightButton.onClick = [this] { nudgeSelectedClip (true); };
-    slipLeftButton.onClick = [this] { slipSelectedClipContent (false); };
-    slipRightButton.onClick = [this] { slipSelectedClipContent (true); };
-    moveToPrevButton.onClick = [this] { moveSelectedClipToNeighbour (false); };
-    moveToNextButton.onClick = [this] { moveSelectedClipToNeighbour (true); };
-    toggleClipLoopButton.onClick = [this] { toggleSelectedClipLooping(); };
-    renameClipButton.onClick = [this] { renameSelectedClip(); };
-    selectAllButton.onClick = [this] { selectAllEditableItems(); };
-    deselectAllButton.onClick = [this] { selectionManager.deselectAll(); };
-    splitAllTracksButton.onClick = [this] { splitAllTracksAtPlayhead(); };
-    insertBarButton.onClick = [this] { insertBarAtPlayhead(); };
-    deleteBarButton.onClick = [this] { deleteBarAtPlayhead(); };
-    quantizeButton.onClick = [this] { quantizeSelectedMidiClip(); };
-    midiTransposeDownButton.onClick = [this] { transposeSelectedMidiNotes (-1); };
-    midiTransposeUpButton.onClick = [this] { transposeSelectedMidiNotes (1); };
-    midiOctaveDownButton.onClick = [this] { transposeSelectedMidiNotes (-12); };
-    midiOctaveUpButton.onClick = [this] { transposeSelectedMidiNotes (12); };
-    midiVelocityDownButton.onClick = [this] { adjustSelectedMidiNoteVelocity (-8); };
-    midiVelocityUpButton.onClick = [this] { adjustSelectedMidiNoteVelocity (8); };
-    midiHumanizeTimingButton.onClick = [this] { humanizeSelectedMidiTiming (0.08); };
-    midiHumanizeVelocityButton.onClick = [this] { humanizeSelectedMidiVelocity (10); };
-    midiLegatoButton.onClick = [this] { legatoSelectedMidiNotes(); };
-    midiBounceToAudioButton.onClick = [this] { bounceSelectedMidiClipToAudio(); };
-    midiGenerateChordsButton.onClick = [this] { generateMidiChordProgression(); };
-    midiGenerateArpButton.onClick = [this] { generateMidiArpeggioPattern(); };
-    midiGenerateBassButton.onClick = [this] { generateMidiBasslinePattern(); };
-    midiGenerateDrumsButton.onClick = [this] { generateMidiDrumPattern(); };
-    chordDirectoryPreviewButton.onClick = [this] { previewChordScaleDirectoryPattern(); };
-    chordDirectoryApplyButton.onClick = [this] { generateMidiChordScaleDirectoryPattern(); };
-    chordDirectoryExportMidiButton.onClick = [this] { exportChordScaleDirectorySelectionAsMidi(); };
-    chordDirectoryExportWavButton.onClick = [this] { exportChordScaleDirectorySelectionAsWav(); };
-    audioGainDownButton.onClick = [this] { adjustSelectedAudioClipGain (-1.0f); };
-    audioGainUpButton.onClick = [this] { adjustSelectedAudioClipGain (1.0f); };
-    audioFadeInButton.onClick = [this] { setSelectedAudioClipFade (true); };
-    audioFadeOutButton.onClick = [this] { setSelectedAudioClipFade (false); };
-    audioClearFadesButton.onClick = [this] { clearSelectedAudioClipFades(); };
-    audioReverseButton.onClick = [this] { toggleSelectedAudioClipReverse(); };
-    audioSpeedDownButton.onClick = [this] { scaleSelectedAudioClipSpeed (0.5); };
-    audioSpeedUpButton.onClick = [this] { scaleSelectedAudioClipSpeed (2.0); };
-    audioPitchDownButton.onClick = [this] { adjustSelectedAudioClipPitch (-1.0f); };
-    audioPitchUpButton.onClick = [this] { adjustSelectedAudioClipPitch (1.0f); };
-    audioAutoTempoButton.onClick = [this] { toggleSelectedAudioClipAutoTempo(); };
-    audioWarpButton.onClick = [this] { toggleSelectedAudioClipWarp(); };
-    audioAlignToBarButton.onClick = [this] { alignSelectedClipToBar(); };
-    audioMake2BarLoopButton.onClick = [this] { makeSelectedClipLoop (2); };
-    audioMake4BarLoopButton.onClick = [this] { makeSelectedClipLoop (4); };
-    audioFillTransportLoopButton.onClick = [this] { fillTransportLoopWithSelectedClip(); };
-    fxRefreshButton.onClick = [this] { refreshSelectedTrackPluginList(); };
-    fxScanButton.onClick = [this] { openPluginScanDialog(); };
-    fxScanSkippedButton.onClick = [this] { scanSkippedPlugins(); };
-    fxPrepPlaybackButton.onClick = [this] { prepareEditForPluginPlayback (true); };
-    fxAddSamplerButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
-    fxAddSynthButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
-    fxAddEQButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
-    fxAddCompButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
-    fxAddReverbButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
-    fxAddDelayButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
-    fxAddExternalInstrumentButton.onClick = [this] { addExternalInstrumentPluginToSelectedTrack(); };
-    fxAddExternalButton.onClick = [this] { addExternalPluginToSelectedTrack(); };
-    fxOpenEditorButton.onClick = [this] { openSelectedTrackPluginEditor(); };
-    fxMoveUpButton.onClick = [this] { moveSelectedTrackPlugin (false); };
-    fxMoveDownButton.onClick = [this] { moveSelectedTrackPlugin (true); };
-    fxBypassButton.onClick = [this] { toggleSelectedTrackPluginBypass(); };
-    fxDeleteButton.onClick = [this] { deleteSelectedTrackPlugin(); };
-    fxChainBox.onChange = [this]
-    {
-        if (updatingTrackControls)
-            return;
-
-        if (auto* plugin = getSelectedTrackPlugin())
-            selectionManager.selectOnly (plugin);
-
-        updateButtonsFromState();
-    };
-    channelRackTrackBox.onChange = [this]
-    {
-        if (updatingChannelRackControls || edit == nullptr)
-            return;
-
-        auto tracks = te::getAudioTracks (*edit);
-        const int selectedIndex = channelRackTrackBox.getSelectedId() - 1;
-        if (selectedIndex < 0 || selectedIndex >= tracks.size())
-            return;
-
-        if (auto* track = tracks.getUnchecked (selectedIndex))
-            selectionManager.selectOnly (track);
-
-        updateTrackControlsFromSelection();
-        updateButtonsFromState();
-    };
-    channelRackPluginBox.onChange = [this]
-    {
-        if (updatingChannelRackControls)
-            return;
-
-        auto* track = getSelectedTrackOrFirst();
-        if (track == nullptr)
-            return;
-
-        auto plugins = track->pluginList.getPlugins();
-        const int selectedIndex = channelRackPluginBox.getSelectedId() - 1;
-        if (selectedIndex < 0 || selectedIndex >= channelRackPluginIndexMap.size())
-            return;
-
-        const int pluginIndex = channelRackPluginIndexMap.getUnchecked (selectedIndex);
-        if (pluginIndex < 0 || pluginIndex >= plugins.size())
-            return;
-
-        if (auto* plugin = plugins[pluginIndex].get())
-        {
-            selectionManager.selectOnly (plugin);
-            fxChainBox.setSelectedId (pluginIndex + 1, juce::dontSendNotification);
-        }
-
-        updateButtonsFromState();
-    };
-    channelRackAddInstrumentButton.onClick = [this] { addExternalInstrumentPluginToSelectedTrack(); };
-    channelRackAddFxButton.onClick = [this] { addExternalPluginToSelectedTrack(); };
-    channelRackOpenPluginButton.onClick = [this] { openSelectedTrackPluginEditor(); };
-    builtInSynthPresetInitButton.onClick = [this] { applyBuiltInSynthPreset (BuiltInSynthPreset::init); };
-    builtInSynthPresetWarmPadButton.onClick = [this] { applyBuiltInSynthPreset (BuiltInSynthPreset::warmPad); };
-    builtInSynthPresetPunchBassButton.onClick = [this] { applyBuiltInSynthPreset (BuiltInSynthPreset::punchBass); };
-    builtInSynthPresetBrightPluckButton.onClick = [this] { applyBuiltInSynthPreset (BuiltInSynthPreset::brightPluck); };
-    builtInSynthCutoffSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthResonanceSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthEnvSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthDriveSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthAttackSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthReleaseSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthReverbSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthDelaySlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthOsc1Slider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthOsc2Slider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthOsc3Slider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthOsc4Slider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthUnisonSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthWidthSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthChorusSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-    builtInSynthMasterSlider.onValueChange = [this] { applyBuiltInSynthMacroFromUI(); };
-
-    trackMuteButton.onClick = [this] { applyTrackMixerFromUI(); };
-    trackSoloButton.onClick = [this] { applyTrackMixerFromUI(); };
-    trackVolumeSlider.onValueChange = [this] { applyTrackMixerFromUI(); };
-    trackPanSlider.onValueChange = [this] { applyTrackMixerFromUI(); };
-    tempoSlider.onValueChange = [this] { applyTempoFromUI(); };
-    trackHeightSlider.onValueChange = [this] { applyTrackHeightFromUI(); };
     leftDockScrollSlider.onValueChange = [this] { resized(); };
+    horizontalZoomSlider.onValueChange = [this] { applyHorizontalZoomFromUI(); };
+    verticalZoomSlider.onValueChange = [this] { applyVerticalZoomFromUI(); };
     horizontalScrollSlider.onValueChange = [this] { applyHorizontalScrollFromUI(); };
     verticalScrollSlider.onValueChange = [this] { applyVerticalScrollFromUI(); };
 
@@ -1493,7 +1106,7 @@ void BeatMakerNoRecord::setupCallbacks()
         if (currentBodyWidthForResize <= 0)
             return;
 
-        const int minLeft = 300;
+        const int minLeft = 220;
         const int maxLeft = juce::jmax (minLeft, currentBodyWidthForResize - 430);
         const int currentWidth = juce::roundToInt (leftDockWidthRatio * (float) currentBodyWidthForResize);
         const int nextWidth = juce::jlimit (minLeft, maxLeft, currentWidth + delta);
@@ -1727,6 +1340,9 @@ void BeatMakerNoRecord::showShortcutOverlay()
     text << "  - / = : MIDI velocity -8 / +8\n";
     text << "  W / M / P: Float/Dock Timeline / Mixer / Piano\n";
     text << "  Alt+1/2/3: Piano editor Split / Piano / Steps\n";
+    text << "  Alt+4: Beatmaker space (uncluttered timeline + piano focus)\n";
+    text << "  Cmd/Ctrl+Shift+B: Beatmaker space hotkey\n";
+    text << "  Use session quick-start buttons: Workspace Focus + Add Instrument (AU/VST3)\n";
     text << "  Cmd/Ctrl+Shift+W/M/P: Float/Dock Timeline / Mixer / Piano\n";
     text << "  Cmd/Ctrl+Shift+D: Dock all floating panels\n";
     text << "  Delete / Backspace: Delete selected item\n";
@@ -2068,7 +1684,7 @@ bool BeatMakerNoRecord::saveEditToPath (const juce::File& requestedFile, juce::S
 void BeatMakerNoRecord::createNewEdit (bool promptForTemplateChooser)
 {
     juce::ignoreUnused (promptForTemplateChooser);
-    ProjectStartTemplate startTemplate = ProjectStartTemplate::defaultSynth;
+    ProjectStartTemplate startTemplate = ProjectStartTemplate::defaultInstrument;
 
     auto projectsRoot = getProjectsRootDirectory();
     if (! projectsRoot.isDirectory() && ! projectsRoot.createDirectory())
@@ -2089,10 +1705,11 @@ void BeatMakerNoRecord::createNewEdit (bool promptForTemplateChooser)
     auto newEdit = te::createEmptyEdit (engine, editFile);
     setCurrentEdit (std::move (newEdit), editFile, "Created new project: " + projectName);
     applyProjectStartTemplate (startTemplate);
+    applyBeatmakerTrackAreaFocusLayout (true, false);
 
     juce::String saveMessage;
     if (saveEditToPath (editFile, saveMessage, true))
-        setStatus ("Created new project: " + projectName + " | Default startup: MIDI instrument-ready. Recording is disabled.");
+        setStatus ("Created new project: " + projectName + " | Professional beatmaker space loaded. Use \"Add Instrument (AU/VST3)\" or \"Add AU/VST3 Instrument\" in FX Rack.");
     else
         setStatus ("Created project but initial save failed: " + saveMessage);
 }
@@ -2216,7 +1833,7 @@ void BeatMakerNoRecord::setCurrentEdit (std::unique_ptr<te::Edit> newEdit, const
 bool BeatMakerNoRecord::chooseNewProjectTemplate (ProjectStartTemplate& outTemplate, bool forcePrompt, bool allowPromptDialog)
 {
     juce::ignoreUnused (forcePrompt, allowPromptDialog);
-    outTemplate = ProjectStartTemplate::defaultSynth;
+    outTemplate = ProjectStartTemplate::defaultInstrument;
     return true;
 }
 
@@ -2240,7 +1857,7 @@ void BeatMakerNoRecord::applyProjectStartTemplate (ProjectStartTemplate startTem
 
     const bool templateHasMidiTrack = startTemplate != ProjectStartTemplate::audioTrack;
 
-    if (startTemplate == ProjectStartTemplate::defaultSynth)
+    if (startTemplate == ProjectStartTemplate::defaultInstrument)
     {
         configureTrackRoleAsMidi (*track, 1, true);
         setStatus ("Created MIDI Beatmaker project.");
@@ -2561,6 +2178,7 @@ void BeatMakerNoRecord::processSelectionChangeForUi()
     updateButtonsFromState();
     timelineRuler.repaint();
     mixerArea.repaint();
+    channelRackPreview.repaint();
     stepSequencer.repaint();
     midiPianoRoll.repaint();
 }

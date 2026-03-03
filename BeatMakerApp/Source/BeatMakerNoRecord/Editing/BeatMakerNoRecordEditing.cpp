@@ -272,8 +272,8 @@ int getBarsFromId (int comboId)
         case 4:  return 24;
         case 5:  return 32;
         case 6:  return 48;
-        case 7:
-        default: return 64;
+        case 7:  return 64;
+        default: return 16;
     }
 }
 
@@ -507,7 +507,7 @@ void BeatMakerNoRecord::openMidiClipInPianoRoll (te::MidiClip& midiClip, bool fl
     setStatus (status);
 }
 
-void BeatMakerNoRecord::addFloatingSynthTrack()
+void BeatMakerNoRecord::addFloatingInstrumentTrack()
 {
     if (edit == nullptr)
         return;
@@ -515,13 +515,13 @@ void BeatMakerNoRecord::addFloatingSynthTrack()
     auto* track = appendTrackWithRole (true, false);
     if (track == nullptr)
     {
-        setStatus ("Failed to create floating synth track.");
+        setStatus ("Failed to create floating instrument track.");
         return;
     }
 
     selectionManager.selectOnly (track);
 
-    const int synthCountBefore = [&track]
+    const int instrumentCountBefore = [&track]
     {
         int count = 0;
         for (auto* plugin : track->pluginList.getPlugins())
@@ -551,7 +551,7 @@ void BeatMakerNoRecord::addFloatingSynthTrack()
     else
         setSectionFloating (FloatSection::piano, true);
 
-    const int synthCountAfter = [&track]
+    const int instrumentCountAfter = [&track]
     {
         int count = 0;
         for (auto* plugin : track->pluginList.getPlugins())
@@ -560,12 +560,12 @@ void BeatMakerNoRecord::addFloatingSynthTrack()
         return count;
     }();
 
-    auto* synth = getPreferredEnabledInstrumentPlugin (*track);
-    juce::String status = "Added floating synth track: " + track->getName();
-    if (synth != nullptr)
-        status << " | Instrument: " << synth->getName();
-    if (synthCountAfter > synthCountBefore)
-        status << " (new synth loaded)";
+    auto* instrument = getPreferredEnabledInstrumentPlugin (*track);
+    juce::String status = "Added floating instrument track: " + track->getName();
+    if (instrument != nullptr)
+        status << " | Instrument: " << instrument->getName();
+    if (instrumentCountAfter > instrumentCountBefore)
+        status << " (new instrument loaded)";
 
     setStatus (status + ".");
 }
@@ -1230,15 +1230,9 @@ bool BeatMakerNoRecord::applyChordScaleDirectoryToClip (te::MidiClip& midiClip,
 
     ensureTrackHasInstrumentForMidiPlayback (*ownerTrack);
 
-    te::Plugin* previewSynth = nullptr;
-    if (previewMode)
-        previewSynth = getPreferredEnabledInstrumentPlugin (*ownerTrack);
-
     const auto timeSignature = getTimeSignatureFromId (chordDirectoryTimeSignatureBox.getSelectedId());
     const int numerator = juce::jmax (1, timeSignature.first);
     const int denominator = juce::jmax (1, timeSignature.second);
-    if (auto timeSig = edit->tempoSequence.getTimeSig (0))
-        timeSig->setStringTimeSig (juce::String (numerator) + "/" + juce::String (denominator));
 
     const int bars = juce::jlimit (8, 64, getBarsFromId (chordDirectoryBarsBox.getSelectedId()));
     const int octave = juce::jlimit (1, 7, chordDirectoryOctaveBox.getSelectedId() > 0 ? chordDirectoryOctaveBox.getSelectedId() : 3);
@@ -1251,13 +1245,6 @@ bool BeatMakerNoRecord::applyChordScaleDirectoryToClip (te::MidiClip& midiClip,
     const double swingAmount = juce::jlimit (0.0, 0.45, chordDirectorySwingSlider.getValue());
     const bool arpDensity = chordDirectoryDensityBox.getSelectedId() == 4;
     const bool arpMode = arpDensity || voicing == DirectoryVoicing::arpPulse;
-
-    if (previewMode && previewSynth == nullptr)
-    {
-        if (outSummary != nullptr)
-            *outSummary = "No external instrument is enabled on this track.";
-        return false;
-    }
 
     if (scaleSemitones.empty() || progressionDegrees.empty())
         return false;
@@ -1354,6 +1341,9 @@ bool BeatMakerNoRecord::applyChordScaleDirectoryToClip (te::MidiClip& midiClip,
                 << " | " << juce::String (numerator) << "/" << juce::String (denominator)
                 << " | octave " << juce::String (octave)
                 << " | " << juce::String (generatedNotes) << " note(s)";
+
+        if (previewMode && getPreferredEnabledInstrumentPlugin (*ownerTrack) == nullptr)
+            summary << " | No instrument available for live audition";
         *outSummary = summary;
     }
 
@@ -1416,11 +1406,15 @@ void BeatMakerNoRecord::previewChordScaleDirectoryPattern()
     }
 
     auto* ownerTrack = dynamic_cast<te::AudioTrack*> (midiClip->getTrack());
+    bool hasInstrument = false;
     if (ownerTrack != nullptr)
+    {
         ensureTrackHasInstrumentForMidiPlayback (*ownerTrack);
+        hasInstrument = getPreferredEnabledInstrumentPlugin (*ownerTrack) != nullptr;
+    }
 
     const auto clipRange = midiClip->getEditTimeRange();
-    if (! clipRange.isEmpty())
+    if (hasInstrument && ! clipRange.isEmpty())
     {
         edit->getTransport().setLoopRange (clipRange);
         edit->getTransport().looping = true;
@@ -1431,7 +1425,10 @@ void BeatMakerNoRecord::previewChordScaleDirectoryPattern()
     }
 
     markPlaybackRoutingNeedsPreparation();
-    setStatus ("Previewing chord/scale directory with internal synth. " + summary + ".");
+    if (hasInstrument)
+        setStatus ("Previewing chord/scale directory with external instrument. " + summary + ".");
+    else
+        setStatus ("Generated chord/scale directory pattern but no instrument is enabled for live preview. " + summary + ".");
 }
 
 void BeatMakerNoRecord::exportChordScaleDirectorySelectionAsMidi()
@@ -1677,31 +1674,56 @@ void BeatMakerNoRecord::generateMidiChordProgression()
     const auto clipStart = midiClip->getPosition().getStart();
     const double beatsPerBar = juce::jmax (1.0, getBeatsPerBarAt (clipStart));
     const double clipLengthBeats = getMidiClipLengthBeats (*midiClip);
-    const int barCount = juce::jlimit (1, 16, juce::jmax (1, juce::roundToInt (std::ceil (clipLengthBeats / beatsPerBar))));
+    const int barCount = juce::jlimit (1, 32, juce::jmax (1, juce::roundToInt (std::ceil (clipLengthBeats / beatsPerBar))));
+    const int octave = juce::jlimit (1, 7, chordDirectoryOctaveBox.getSelectedId() > 0 ? chordDirectoryOctaveBox.getSelectedId() : 3);
+    const int tonicMidi = juce::jlimit (24, 96, (octave + 1) * 12 + getRootSemitoneFromId (chordDirectoryRootBox.getSelectedId()));
+    const auto scaleSemitones = getScaleIntervalsFromId (chordDirectoryScaleBox.getSelectedId());
+    const auto progressionDegrees = getProgressionDegreesFromId (chordDirectoryProgressionBox.getSelectedId());
 
-    constexpr int chordRoots[] = { 60, 67, 69, 65 }; // I-V-vi-IV in C
-    constexpr bool isMinorChord[] = { false, false, true, false };
+    if (scaleSemitones.empty() || progressionDegrees.empty())
+    {
+        setStatus ("Generator settings are invalid. Check scale/progression.");
+        return;
+    }
+
     int generatedNotes = 0;
 
     for (int bar = 0; bar < barCount; ++bar)
     {
-        const int progressionIndex = bar % 4;
-        const int root = chordRoots[progressionIndex];
-        const int third = root + (isMinorChord[progressionIndex] ? 3 : 4);
-        const int fifth = root + 7;
-        const int octave = root + 12;
+        const int degree = progressionDegrees[(size_t) (bar % (int) progressionDegrees.size())];
+        const int degreeIndex = juce::jmax (0, degree - 1);
+        const auto chordNotes = buildDiatonicChordNotes (tonicMidi, scaleSemitones, degreeIndex, DirectoryVoicing::sevenths);
+        if (chordNotes.empty())
+            continue;
 
         const double startBeat = (double) bar * beatsPerBar;
         const double noteLength = juce::jmax (0.25, beatsPerBar * 0.92);
+        for (int noteIndex = 0; noteIndex < (int) chordNotes.size(); ++noteIndex)
+        {
+            const int velocity = juce::jlimit (1, 127, 104 - (noteIndex * 6));
+            if (addClampedMidiNote (sequence,
+                                    chordNotes[(size_t) noteIndex],
+                                    startBeat,
+                                    noteLength,
+                                    velocity,
+                                    undoManager,
+                                    clipLengthBeats,
+                                    0))
+            {
+                ++generatedNotes;
+            }
+        }
+    }
 
-        if (addClampedMidiNote (sequence, root, startBeat, noteLength, 102, undoManager, clipLengthBeats, 0)) ++generatedNotes;
-        if (addClampedMidiNote (sequence, third, startBeat, noteLength, 96, undoManager, clipLengthBeats, 0)) ++generatedNotes;
-        if (addClampedMidiNote (sequence, fifth, startBeat, noteLength, 92, undoManager, clipLengthBeats, 0)) ++generatedNotes;
-        if (addClampedMidiNote (sequence, octave, startBeat, noteLength, 82, undoManager, clipLengthBeats, 0)) ++generatedNotes;
+    if (generatedNotes <= 0)
+    {
+        setStatus ("No notes generated for chord progression.");
+        return;
     }
 
     selectionManager.selectOnly (midiClip);
-    setStatus ("Generated MIDI chords (" + juce::String (barCount) + " bar(s), " + juce::String (generatedNotes) + " notes).");
+    setStatus ("Generated MIDI chords (" + juce::String (barCount) + " bar(s), " + juce::String (generatedNotes) + " notes, "
+               + chordDirectoryRootBox.getText() + " " + chordDirectoryScaleBox.getText() + ").");
 }
 
 void BeatMakerNoRecord::generateMidiArpeggioPattern()
@@ -1733,24 +1755,43 @@ void BeatMakerNoRecord::generateMidiArpeggioPattern()
     const auto clipStart = midiClip->getPosition().getStart();
     const double beatsPerBar = juce::jmax (1.0, getBeatsPerBarAt (clipStart));
     const double clipLengthBeats = getMidiClipLengthBeats (*midiClip);
-    const double stepBeats = juce::jlimit (0.125, 1.0, getPianoRollGridBeats().inBeats());
+    const double stepBeats = juce::jlimit (1.0 / 16.0, 1.0, getPianoRollGridBeats().inBeats());
     const int stepCount = juce::jlimit (1, 2048, juce::jmax (1, juce::roundToInt (std::ceil (clipLengthBeats / stepBeats))));
+    const int octave = juce::jlimit (1, 7, chordDirectoryOctaveBox.getSelectedId() > 0 ? chordDirectoryOctaveBox.getSelectedId() : 3);
+    const int tonicMidi = juce::jlimit (24, 96, (octave + 1) * 12 + getRootSemitoneFromId (chordDirectoryRootBox.getSelectedId()));
+    const auto scaleSemitones = getScaleIntervalsFromId (chordDirectoryScaleBox.getSelectedId());
+    const auto progressionDegrees = getProgressionDegreesFromId (chordDirectoryProgressionBox.getSelectedId());
+    constexpr int arpShape[] = { 0, 1, 2, 1, 3, 2, 1, 0 };
+    constexpr int arpShapeCount = (int) (sizeof (arpShape) / sizeof (arpShape[0]));
 
-    constexpr int chordRoots[] = { 60, 67, 69, 65 }; // I-V-vi-IV in C
-    constexpr int arpIntervals[] = { 0, 4, 7, 12, 7, 4, 7, 4 };
-    constexpr int intervalCount = (int) (sizeof (arpIntervals) / sizeof (arpIntervals[0]));
+    if (scaleSemitones.empty() || progressionDegrees.empty())
+    {
+        setStatus ("Generator settings are invalid. Check scale/progression.");
+        return;
+    }
 
     int generatedNotes = 0;
     for (int step = 0; step < stepCount; ++step)
     {
         const double beat = (double) step * stepBeats;
         const int barIndex = juce::jmax (0, juce::roundToInt (std::floor (beat / beatsPerBar)));
-        const int root = chordRoots[barIndex % 4];
-        const int noteNumber = juce::jlimit (24, 108, root + arpIntervals[step % intervalCount]);
+        const int degree = progressionDegrees[(size_t) (barIndex % (int) progressionDegrees.size())];
+        const int degreeIndex = juce::jmax (0, degree - 1);
+        const auto chordNotes = buildDiatonicChordNotes (tonicMidi, scaleSemitones, degreeIndex, DirectoryVoicing::sevenths);
+        if (chordNotes.empty())
+            continue;
+
+        const int noteNumber = chordNotes[(size_t) (arpShape[step % arpShapeCount] % (int) chordNotes.size())];
         const int velocity = (step % 4 == 0) ? 108 : 92;
         const double length = juce::jmax (0.0625, stepBeats * 0.82);
         if (addClampedMidiNote (sequence, noteNumber, beat, length, velocity, undoManager, clipLengthBeats, 0))
             ++generatedNotes;
+    }
+
+    if (generatedNotes <= 0)
+    {
+        setStatus ("No notes generated for arpeggio.");
+        return;
     }
 
     selectionManager.selectOnly (midiClip);
@@ -1787,16 +1828,31 @@ void BeatMakerNoRecord::generateMidiBasslinePattern()
     const auto clipStart = midiClip->getPosition().getStart();
     const double beatsPerBar = juce::jmax (1.0, getBeatsPerBarAt (clipStart));
     const double clipLengthBeats = getMidiClipLengthBeats (*midiClip);
-    const int barCount = juce::jlimit (1, 16, juce::jmax (1, juce::roundToInt (std::ceil (clipLengthBeats / beatsPerBar))));
+    const int barCount = juce::jlimit (1, 32, juce::jmax (1, juce::roundToInt (std::ceil (clipLengthBeats / beatsPerBar))));
     const double beatStep = juce::jmax (0.125, beatsPerBar / 4.0);
+    const int octave = juce::jlimit (1, 7, chordDirectoryOctaveBox.getSelectedId() > 0 ? chordDirectoryOctaveBox.getSelectedId() : 3);
+    const int tonicMidi = juce::jlimit (24, 96, (octave + 1) * 12 + getRootSemitoneFromId (chordDirectoryRootBox.getSelectedId()));
+    const auto scaleSemitones = getScaleIntervalsFromId (chordDirectoryScaleBox.getSelectedId());
+    const auto progressionDegrees = getProgressionDegreesFromId (chordDirectoryProgressionBox.getSelectedId());
 
-    constexpr int chordRoots[] = { 60, 67, 69, 65 }; // I-V-vi-IV in C
+    if (scaleSemitones.empty() || progressionDegrees.empty())
+    {
+        setStatus ("Generator settings are invalid. Check scale/progression.");
+        return;
+    }
+
     int generatedNotes = 0;
 
     for (int bar = 0; bar < barCount; ++bar)
     {
-        const int root = chordRoots[bar % 4] - 24;
-        const int fifth = juce::jlimit (24, 96, root + 7);
+        const int degree = progressionDegrees[(size_t) (bar % (int) progressionDegrees.size())];
+        const int degreeIndex = juce::jmax (0, degree - 1);
+        const auto chordNotes = buildDiatonicChordNotes (tonicMidi, scaleSemitones, degreeIndex, DirectoryVoicing::triads);
+        if (chordNotes.empty())
+            continue;
+
+        const int root = juce::jlimit (24, 96, chordNotes.front() - 24);
+        const int fifth = juce::jlimit (24, 96, chordNotes.size() > 2 ? chordNotes[2] - 24 : root + 7);
         const double barBeat = (double) bar * beatsPerBar;
 
         for (int step = 0; step < 4; ++step)
@@ -1823,6 +1879,12 @@ void BeatMakerNoRecord::generateMidiBasslinePattern()
                 ++generatedNotes;
             }
         }
+    }
+
+    if (generatedNotes <= 0)
+    {
+        setStatus ("No notes generated for bassline.");
+        return;
     }
 
     selectionManager.selectOnly (midiClip);
@@ -1904,6 +1966,12 @@ void BeatMakerNoRecord::generateMidiDrumPattern()
             else if (isHat)
                 addDrum (42, beat, step16 * 0.68, 74 + random.nextInt (16));
         }
+    }
+
+    if (generatedNotes <= 0)
+    {
+        setStatus ("No hits generated for drum pattern.");
+        return;
     }
 
     selectionManager.selectOnly (midiClip);
@@ -2122,268 +2190,6 @@ te::Plugin* BeatMakerNoRecord::getSelectedTrackPlugin() const
     return nullptr;
 }
 
-bool BeatMakerNoRecord::isBuiltInSynthPlugin (te::Plugin* plugin)
-{
-    return plugin != nullptr && plugin->getPluginType().equalsIgnoreCase ("4osc");
-}
-
-void BeatMakerNoRecord::setBuiltInSynthParameterNormalised (te::Plugin& plugin,
-                                                            const juce::String& parameterID,
-                                                            float normalisedValue)
-{
-    if (auto param = plugin.getAutomatableParameterByID (parameterID))
-        param->setNormalisedParameter (juce::jlimit (0.0f, 1.0f, normalisedValue), juce::sendNotification);
-}
-
-float BeatMakerNoRecord::getBuiltInSynthParameterNormalised (te::Plugin& plugin,
-                                                             const juce::String& parameterID,
-                                                             float fallbackNormalisedValue)
-{
-    if (auto param = plugin.getAutomatableParameterByID (parameterID))
-        return param->getCurrentNormalisedValue();
-
-    return fallbackNormalisedValue;
-}
-
-te::Plugin* BeatMakerNoRecord::getSelectedBuiltInSynthPlugin() const
-{
-    if (auto* selectedPlugin = dynamic_cast<te::Plugin*> (selectionManager.getSelectedObject (0)))
-        if (isBuiltInSynthPlugin (selectedPlugin))
-            return selectedPlugin;
-
-    auto* track = getSelectedTrackOrFirst();
-    if (track == nullptr)
-        return nullptr;
-
-    te::Plugin* fallback = nullptr;
-    for (auto* plugin : track->pluginList.getPlugins())
-    {
-        if (! isBuiltInSynthPlugin (plugin))
-            continue;
-
-        if (plugin->isEnabled())
-            return plugin;
-
-        if (fallback == nullptr)
-            fallback = plugin;
-    }
-
-    return fallback;
-}
-
-void BeatMakerNoRecord::applyBuiltInSynthPresetToPlugin (te::Plugin& plugin, BuiltInSynthPreset preset)
-{
-    if (! isBuiltInSynthPlugin (&plugin))
-        return;
-
-    auto set = [&plugin] (const char* parameterID, float normalisedValue)
-    {
-        setBuiltInSynthParameterNormalised (plugin, parameterID, normalisedValue);
-    };
-
-    set ("tune1", 0.50f);
-    set ("tune2", 0.50f);
-    set ("tune3", 0.50f);
-    set ("tune4", 0.50f);
-    set ("level1", 0.92f);
-    set ("level2", 0.00f);
-    set ("level3", 0.00f);
-    set ("level4", 0.00f);
-    set ("detune1", 0.00f);
-    set ("detune2", 0.00f);
-    set ("detune3", 0.00f);
-    set ("detune4", 0.00f);
-    set ("spread1", 0.50f);
-    set ("spread2", 0.50f);
-    set ("spread3", 0.50f);
-    set ("spread4", 0.50f);
-    set ("pan1", 0.50f);
-    set ("pan2", 0.50f);
-    set ("pan3", 0.50f);
-    set ("pan4", 0.50f);
-    set ("ampAttack", 0.02f);
-    set ("ampDecay", 0.22f);
-    set ("ampSustain", 0.85f);
-    set ("ampRelease", 0.14f);
-    set ("ampVelocity", 0.92f);
-    set ("filterFreq", 0.82f);
-    set ("filterResonance", 0.12f);
-    set ("filterAmount", 0.58f);
-    set ("filterKey", 0.52f);
-    set ("filterVelocity", 0.56f);
-    set ("distortion", 0.04f);
-    set ("reverbSize", 0.46f);
-    set ("reverbDamping", 0.35f);
-    set ("reverbWidth", 0.80f);
-    set ("reverbMix", 0.08f);
-    set ("delayFeedback", 0.32f);
-    set ("delayCrossfeed", 0.25f);
-    set ("delayMix", 0.00f);
-    set ("chorusSpeed", 0.26f);
-    set ("chorusDepth", 0.22f);
-    set ("chorusWidth", 0.66f);
-    set ("chorusMix", 0.06f);
-    set ("masterLevel", 0.80f);
-    set ("legato", 0.00f);
-
-    switch (preset)
-    {
-        case BuiltInSynthPreset::warmPad:
-        {
-            set ("level1", 0.88f);
-            set ("level2", 0.68f);
-            set ("level3", 0.54f);
-            set ("level4", 0.36f);
-            set ("detune2", 0.26f);
-            set ("detune3", 0.18f);
-            set ("detune4", 0.10f);
-            set ("spread2", 0.80f);
-            set ("spread3", 0.20f);
-            set ("spread4", 0.68f);
-            set ("pan2", 0.68f);
-            set ("pan3", 0.34f);
-            set ("pan4", 0.58f);
-            set ("ampAttack", 0.24f);
-            set ("ampDecay", 0.50f);
-            set ("ampSustain", 0.80f);
-            set ("ampRelease", 0.72f);
-            set ("filterFreq", 0.42f);
-            set ("filterResonance", 0.28f);
-            set ("filterAmount", 0.74f);
-            set ("distortion", 0.03f);
-            set ("reverbMix", 0.36f);
-            set ("delayMix", 0.16f);
-            set ("chorusMix", 0.34f);
-            set ("masterLevel", 0.74f);
-            break;
-        }
-
-        case BuiltInSynthPreset::punchBass:
-        {
-            set ("tune2", 0.333f);
-            set ("level1", 0.96f);
-            set ("level2", 0.72f);
-            set ("level3", 0.15f);
-            set ("level4", 0.00f);
-            set ("detune2", 0.06f);
-            set ("detune3", 0.02f);
-            set ("spread2", 0.58f);
-            set ("spread3", 0.42f);
-            set ("ampAttack", 0.01f);
-            set ("ampDecay", 0.26f);
-            set ("ampSustain", 0.60f);
-            set ("ampRelease", 0.10f);
-            set ("filterFreq", 0.26f);
-            set ("filterResonance", 0.42f);
-            set ("filterAmount", 0.82f);
-            set ("distortion", 0.34f);
-            set ("reverbMix", 0.02f);
-            set ("delayMix", 0.00f);
-            set ("chorusMix", 0.04f);
-            set ("masterLevel", 0.82f);
-            break;
-        }
-
-        case BuiltInSynthPreset::brightPluck:
-        {
-            set ("tune3", 0.667f);
-            set ("level1", 0.88f);
-            set ("level2", 0.56f);
-            set ("level3", 0.26f);
-            set ("level4", 0.00f);
-            set ("detune2", 0.12f);
-            set ("detune3", 0.10f);
-            set ("spread2", 0.72f);
-            set ("spread3", 0.30f);
-            set ("pan2", 0.65f);
-            set ("pan3", 0.35f);
-            set ("ampAttack", 0.01f);
-            set ("ampDecay", 0.20f);
-            set ("ampSustain", 0.30f);
-            set ("ampRelease", 0.18f);
-            set ("filterFreq", 0.68f);
-            set ("filterResonance", 0.54f);
-            set ("filterAmount", 0.84f);
-            set ("distortion", 0.12f);
-            set ("reverbMix", 0.18f);
-            set ("delayMix", 0.15f);
-            set ("chorusMix", 0.12f);
-            set ("masterLevel", 0.77f);
-            break;
-        }
-
-        case BuiltInSynthPreset::init:
-        default:
-            break;
-    }
-}
-
-void BeatMakerNoRecord::applyBuiltInSynthPreset (BuiltInSynthPreset preset)
-{
-    auto* plugin = getSelectedBuiltInSynthPlugin();
-    if (plugin == nullptr)
-    {
-        setStatus ("No built-in 4OSC synth found on the selected track.");
-        return;
-    }
-
-    applyBuiltInSynthPresetToPlugin (*plugin, preset);
-    refreshBuiltInSynthControlsFromSelection();
-
-    juce::String presetName = "Init";
-    switch (preset)
-    {
-        case BuiltInSynthPreset::warmPad:     presetName = "Warm Pad"; break;
-        case BuiltInSynthPreset::punchBass:   presetName = "Punch Bass"; break;
-        case BuiltInSynthPreset::brightPluck: presetName = "Bright Pluck"; break;
-        case BuiltInSynthPreset::init:
-        default:                              break;
-    }
-
-    setStatus ("Applied built-in synth preset: " + presetName + ".");
-}
-
-void BeatMakerNoRecord::applyBuiltInSynthMacroFromUI()
-{
-    if (updatingBuiltInSynthControls)
-        return;
-
-    auto* plugin = getSelectedBuiltInSynthPlugin();
-    if (plugin == nullptr)
-        return;
-
-    setBuiltInSynthParameterNormalised (*plugin, "filterFreq", (float) builtInSynthCutoffSlider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "filterResonance", (float) builtInSynthResonanceSlider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "filterAmount", (float) builtInSynthEnvSlider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "distortion", (float) builtInSynthDriveSlider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "ampAttack", (float) builtInSynthAttackSlider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "ampRelease", (float) builtInSynthReleaseSlider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "reverbMix", (float) builtInSynthReverbSlider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "delayMix", (float) builtInSynthDelaySlider.getValue());
-
-    setBuiltInSynthParameterNormalised (*plugin, "level1", (float) builtInSynthOsc1Slider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "level2", (float) builtInSynthOsc2Slider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "level3", (float) builtInSynthOsc3Slider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "level4", (float) builtInSynthOsc4Slider.getValue());
-
-    const float unison = (float) builtInSynthUnisonSlider.getValue();
-    setBuiltInSynthParameterNormalised (*plugin, "detune2", juce::jmap (unison, 0.0f, 0.40f));
-    setBuiltInSynthParameterNormalised (*plugin, "detune3", juce::jmap (unison, 0.0f, 0.26f));
-    setBuiltInSynthParameterNormalised (*plugin, "detune4", juce::jmap (unison, 0.0f, 0.14f));
-    setBuiltInSynthParameterNormalised (*plugin, "spread2", juce::jmap (unison, 0.50f, 0.84f));
-    setBuiltInSynthParameterNormalised (*plugin, "spread3", juce::jmap (unison, 0.50f, 0.16f));
-    setBuiltInSynthParameterNormalised (*plugin, "spread4", juce::jmap (unison, 0.50f, 0.70f));
-
-    const float width = (float) builtInSynthWidthSlider.getValue();
-    setBuiltInSynthParameterNormalised (*plugin, "pan1", 0.50f);
-    setBuiltInSynthParameterNormalised (*plugin, "pan2", juce::jmap (width, 0.50f, 0.95f));
-    setBuiltInSynthParameterNormalised (*plugin, "pan3", juce::jmap (width, 0.50f, 0.05f));
-    setBuiltInSynthParameterNormalised (*plugin, "pan4", juce::jmap (width, 0.50f, 0.78f));
-
-    setBuiltInSynthParameterNormalised (*plugin, "chorusMix", (float) builtInSynthChorusSlider.getValue());
-    setBuiltInSynthParameterNormalised (*plugin, "masterLevel", (float) builtInSynthMasterSlider.getValue());
-}
-
 void BeatMakerNoRecord::openSelectedTrackPluginEditor()
 {
     auto* plugin = getSelectedTrackPlugin();
@@ -2398,12 +2204,6 @@ void BeatMakerNoRecord::openSelectedTrackPluginEditor()
         setStatus ("Opened plugin UI: " + plugin->getName());
     else
         setStatus ("Plugin UI not available for: " + plugin->getName());
-}
-
-void BeatMakerNoRecord::addBuiltInPluginToSelectedTrack (const juce::String& pluginType, const juce::String& displayName)
-{
-    juce::ignoreUnused (pluginType, displayName);
-    setStatus ("Built-in synth/effect plugins are removed from this build. Use AU/VST3 plugins.");
 }
 
 bool BeatMakerNoRecord::trackHasInstrumentPlugin (te::AudioTrack& track) const
@@ -2426,7 +2226,7 @@ bool BeatMakerNoRecord::trackHasMidiContent (te::AudioTrack& track) const
 }
 
 bool BeatMakerNoRecord::enableExistingInstrumentForDefaultMode (te::AudioTrack& track,
-                                                                DefaultSynthMode mode,
+                                                                DefaultInstrumentMode mode,
                                                                 int& enabledInstruments)
 {
     if (trackHasInstrumentPlugin (track))
@@ -2443,7 +2243,7 @@ bool BeatMakerNoRecord::enableExistingInstrumentForDefaultMode (te::AudioTrack& 
             continue;
 
         bool shouldEnable = true;
-        if (mode == DefaultSynthMode::forceExternalVst3)
+        if (mode == DefaultInstrumentMode::forceExternalVst3)
             shouldEnable = external->isVST3();
 
         if (! shouldEnable)
@@ -2458,11 +2258,11 @@ bool BeatMakerNoRecord::enableExistingInstrumentForDefaultMode (te::AudioTrack& 
 }
 
 bool BeatMakerNoRecord::insertInstrumentForDefaultMode (te::AudioTrack& track,
-                                                        DefaultSynthMode mode,
+                                                        DefaultInstrumentMode mode,
                                                         int& addedInstruments)
 {
     const auto knownTypes = engine.getPluginManager().knownPluginList.getTypes();
-    const bool allowAuFallback = (mode == DefaultSynthMode::autoPreferExternal);
+    const bool allowAuFallback = (mode == DefaultInstrumentMode::autoPreferExternal);
 
     if (const auto preferred = findPreferredExternalInstrument (knownTypes, allowAuFallback))
     {
@@ -2478,7 +2278,7 @@ bool BeatMakerNoRecord::insertInstrumentForDefaultMode (te::AudioTrack& track,
     return false;
 }
 
-te::Plugin* BeatMakerNoRecord::choosePreferredInstrumentPluginForMode (te::AudioTrack& track, DefaultSynthMode mode) const
+te::Plugin* BeatMakerNoRecord::choosePreferredInstrumentPluginForMode (te::AudioTrack& track, DefaultInstrumentMode mode) const
 {
     auto plugins = track.pluginList.getPlugins();
 
@@ -2500,7 +2300,7 @@ te::Plugin* BeatMakerNoRecord::choosePreferredInstrumentPluginForMode (te::Audio
         if (enabled && enabledFallback == nullptr)
             enabledFallback = plugin;
 
-        const bool preferredForMode = (mode != DefaultSynthMode::forceExternalVst3) || external->isVST3();
+        const bool preferredForMode = (mode != DefaultInstrumentMode::forceExternalVst3) || external->isVST3();
         if (! preferredForMode)
             continue;
 
@@ -2524,7 +2324,7 @@ te::Plugin* BeatMakerNoRecord::choosePreferredInstrumentPluginForMode (te::Audio
 }
 
 bool BeatMakerNoRecord::normalizeTrackInstrumentActivationForMode (te::AudioTrack& track,
-                                                                   DefaultSynthMode mode,
+                                                                   DefaultInstrumentMode mode,
                                                                    int& enabledInstruments)
 {
     auto* preferred = choosePreferredInstrumentPluginForMode (track, mode);
@@ -2559,7 +2359,7 @@ bool BeatMakerNoRecord::prepareTrackForMidiPlayback (te::AudioTrack& track, int&
     if (removedBuiltIns > 0)
         changed = true;
 
-    const auto defaultMode = getDefaultSynthModeSelection();
+    const auto defaultMode = getDefaultInstrumentModeSelection();
     changed = enableExistingInstrumentForDefaultMode (track, defaultMode, enabledInstruments) || changed;
 
     if (! trackHasInstrumentPlugin (track) && insertInstrumentForDefaultMode (track, defaultMode, addedInstruments))
@@ -2647,7 +2447,7 @@ void BeatMakerNoRecord::prepareEditForPluginPlayback (bool reorderFxChains)
     int movedPlugins = 0;
     int missingVst3Tracks = 0;
     bool changed = false;
-    const bool forceVst3Mode = getDefaultSynthModeSelection() == DefaultSynthMode::forceExternalVst3;
+    const bool forceVst3Mode = getDefaultInstrumentModeSelection() == DefaultInstrumentMode::forceExternalVst3;
 
     for (auto* track : te::getAudioTracks (*edit))
     {
@@ -2750,8 +2550,8 @@ bool BeatMakerNoRecord::ensureTrackHasInstrumentForMidiPlayback (te::AudioTrack&
 
     if (! hasInstrumentNow)
     {
-        if (getDefaultSynthModeSelection() == DefaultSynthMode::forceExternalVst3)
-            setStatus ("No VST3 instrument available in forced VST3 mode. Scan plugins or switch synth mode.");
+        if (getDefaultInstrumentModeSelection() == DefaultInstrumentMode::forceExternalVst3)
+            setStatus ("No VST3 instrument available in forced VST3 mode. Scan plugins or switch instrument mode.");
         else
             setStatus ("No external instrument available for MIDI playback. Scan plugins or add an AU/VST3 instrument.");
     }
@@ -2919,11 +2719,6 @@ void BeatMakerNoRecord::addExternalInstrumentPluginToSelectedTrack()
                    + desc.name + " on " + track->getName()
                    + " (" + juce::String (loadElapsedMs) + " ms).");
     }
-}
-
-void BeatMakerNoRecord::addBundledNovaSynthToSelectedTrack()
-{
-    setStatus ("Bundled synth is removed from this build. Use Add AU/VST3 Instrument.");
 }
 
 void BeatMakerNoRecord::addExternalPluginToSelectedTrack()
@@ -4245,6 +4040,21 @@ void BeatMakerNoRecord::zoomTimeline (double factor)
     zoomTimelineAroundTime (factor, anchorTime);
 }
 
+void BeatMakerNoRecord::zoomTimelineVertically (double factor)
+{
+    if (editComponent == nullptr)
+        return;
+
+    auto& viewState = editComponent->getEditViewState();
+    const double minTrackHeight = trackHeightSlider.getMinimum();
+    const double maxTrackHeight = trackHeightSlider.getMaximum();
+    const double nextTrackHeight = juce::jlimit (minTrackHeight,
+                                                 maxTrackHeight,
+                                                 viewState.trackHeight.get() * factor);
+    viewState.trackHeight = nextTrackHeight;
+    syncViewControlsFromState();
+}
+
 void BeatMakerNoRecord::resetZoom()
 {
     if (editComponent == nullptr)
@@ -4253,6 +4063,15 @@ void BeatMakerNoRecord::resetZoom()
     auto& viewState = editComponent->getEditViewState();
     viewState.viewX1 = te::TimePosition::fromSeconds (0.0);
     viewState.viewX2 = te::TimePosition::fromSeconds (16.0);
+    syncViewControlsFromState();
+}
+
+void BeatMakerNoRecord::resetVerticalZoom()
+{
+    if (editComponent == nullptr)
+        return;
+
+    editComponent->getEditViewState().trackHeight = 58.0;
     syncViewControlsFromState();
 }
 

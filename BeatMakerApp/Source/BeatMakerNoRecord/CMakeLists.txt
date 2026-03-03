@@ -82,3 +82,20 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_link_options(${TARGET_NAME} PRIVATE "-m64")
     endif()
 endif()
+
+if (BUILD_TESTING)
+    set (UI_REGRESSION_TEST_TARGET BeatMakerNoRecordUiRegressionTests)
+    add_executable (${UI_REGRESSION_TEST_TARGET}
+        Panels/SharedLayoutSystem.cpp
+        UI/BeatMakerNoRecordCommandRouting.cpp
+        Tests/UiRegressionTests.cpp)
+
+    target_compile_features (${UI_REGRESSION_TEST_TARGET} PRIVATE cxx_std_20)
+    target_include_directories (${UI_REGRESSION_TEST_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries (${UI_REGRESSION_TEST_TARGET} PRIVATE
+        juce::juce_gui_basics
+        juce::juce_core)
+
+    add_test (NAME ${UI_REGRESSION_TEST_TARGET}
+              COMMAND ${UI_REGRESSION_TEST_TARGET})
+endif()

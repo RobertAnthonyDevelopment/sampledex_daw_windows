@@ -3,7 +3,16 @@
 #include "../common/PluginWindow.h"
 #include "Core/BeatMakerNoRecordCore.cpp"
 #include "UI/BeatMakerNoRecordUI.cpp"
+#include "UI/BeatMakerNoRecordCommandRouting.cpp"
 #include "Editing/BeatMakerNoRecordEditing.cpp"
+#include "Panels/SharedLayoutSystem.cpp"
+#include "Panels/SessionHeaderPanel.cpp"
+#include "Panels/ArrangementPanel.cpp"
+#include "Panels/TrackPanel.cpp"
+#include "Panels/MidiPanel.cpp"
+#include "Panels/FxPanel.cpp"
+#include "Panels/MixerPanel.cpp"
+#include "Panels/PianoPanel.cpp"
 #include <cstdlib>
 #include <iostream>
 
