@@ -59,7 +59,8 @@ private:
     {
         none,
         volume,
-        pan
+        pan,
+        sendLevel
     };
 
     enum class StepSequencerDragMode
@@ -79,7 +80,6 @@ private:
     enum class DefaultSynthMode
     {
         autoPreferExternal,
-        force4Osc,
         forceExternalVst3
     };
 
@@ -128,6 +128,7 @@ private:
         SectionContainer (BeatMakerNoRecord& ownerToUse, FloatSection sectionToUse);
 
     private:
+        void paint (juce::Graphics& g) override;
         void resized() override;
         void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
@@ -158,6 +159,8 @@ private:
         void paint (juce::Graphics& g) override;
         void mouseDown (const juce::MouseEvent& e) override;
         void mouseDrag (const juce::MouseEvent& e) override;
+        void mouseEnter (const juce::MouseEvent& e) override;
+        void mouseExit (const juce::MouseEvent& e) override;
 
         bool isVertical = true;
         juce::Point<int> dragStartScreen;
@@ -237,6 +240,22 @@ private:
         juce::String lastStateSignature;
     };
 
+    class ChannelRackPreviewComponent : public juce::Component,
+                                        private juce::Timer
+    {
+    public:
+        explicit ChannelRackPreviewComponent (BeatMakerNoRecord& ownerToUse);
+
+        void paint (juce::Graphics& g) override;
+        void mouseDown (const juce::MouseEvent& e) override;
+
+    private:
+        void timerCallback() override;
+
+        BeatMakerNoRecord& owner;
+        juce::String lastStateSignature;
+    };
+
     te::Engine engine { "TheSampledexWorkflow", createBeatMakerUiBehaviour(), nullptr };
     te::SelectionManager selectionManager { engine };
     std::unique_ptr<te::Edit> edit;
@@ -277,6 +296,7 @@ private:
     bool pianoRollRulerScrubActive = false;
     mutable te::EditItemID activeMidiClipID;
     int mixerDragTrackIndex = -1;
+    int mixerDragSendSlot = -1;
     MixerDragMode mixerDragMode = MixerDragMode::none;
     StepSequencerDragMode stepSequencerDragMode = StepSequencerDragMode::none;
     int stepSequencerDragLastLane = -1;
@@ -294,6 +314,7 @@ private:
     float outputMeterSmoothed = 0.0f;
     bool updatingChannelRackControls = false;
     bool updatingBuiltInSynthControls = false;
+    juce::Array<int> channelRackPluginIndexMap;
     juce::StringArray skippedPluginScanEntries;
     UiDensityMode uiDensityMode = UiDensityMode::comfortable;
 
@@ -442,7 +463,7 @@ private:
     juce::TextButton fxScanSkippedButton { "Scan Skipped" };
     juce::TextButton fxPrepPlaybackButton { "Prep Playback" };
     juce::TextButton fxAddSamplerButton { "Add Sampler" };
-    juce::TextButton fxAddSynthButton { "Add 4OSC" };
+    juce::TextButton fxAddSynthButton { "Built-in Synth (Removed)" };
     juce::TextButton fxAddEQButton { "Add EQ" };
     juce::TextButton fxAddCompButton { "Add Comp" };
     juce::TextButton fxAddReverbButton { "Add Reverb" };
@@ -480,6 +501,9 @@ private:
     LayoutSplitter workspaceBottomSplitter { false };
     LayoutSplitter mixerPianoSplitter { false };
     LayoutSplitter pianoStepSplitter { false };
+    LayoutSplitter mixerRackSplitter { false };
+    LayoutSplitter rackInspectorSplitter { true };
+    LayoutSplitter channelRackControlsSplitter { false };
     SectionContainer workspaceSection { *this, FloatSection::workspace };
     SectionContainer mixerSection { *this, FloatSection::mixer };
     SectionContainer pianoSection { *this, FloatSection::piano };
@@ -488,14 +512,35 @@ private:
     float workspaceBottomHeightRatio = 0.46f;
     float mixerPianoHeightRatio = 0.42f;
     float pianoStepHeightRatio = 0.44f;
+    float mixerRackHeightRatio = 0.56f;
+    float rackInspectorWidthRatio = 0.58f;
+    float channelRackControlsHeightRatio = 0.36f;
     int currentBodyWidthForResize = 0;
     int currentRightDockWidthForResize = 0;
     int currentRightDockHeightForResize = 0;
     int currentBottomDockHeightForResize = 0;
     int currentPianoSectionHeightForResize = 0;
+    int currentMixerSectionHeightForResize = 0;
+    int currentRackSectionWidthForResize = 0;
+    int currentChannelRackSectionHeightForResize = 0;
     juce::Rectangle<int> leftDockViewportBounds;
     bool leftDockUsesDualColumn = false;
     int leftDockDualColumnDividerX = 0;
+    bool windowPanelWorkspaceVisible = true;
+    bool windowPanelMixerVisible = true;
+    bool windowPanelPianoVisible = true;
+    bool windowPanelArrangementVisible = true;
+    bool windowPanelTrackVisible = true;
+    bool windowPanelClipVisible = true;
+    bool windowPanelMidiVisible = true;
+    bool windowPanelAudioVisible = true;
+    bool windowPanelFxVisible = true;
+    bool windowPanelTrackMixerVisible = true;
+    bool windowPanelMixerAreaVisible = true;
+    bool windowPanelChannelRackVisible = true;
+    bool windowPanelInspectorVisible = true;
+    bool windowPanelPianoRollVisible = true;
+    bool windowPanelStepSequencerVisible = true;
     bool workspaceSectionFloating = false;
     bool mixerSectionFloating = false;
     bool pianoSectionFloating = false;
@@ -538,6 +583,7 @@ private:
     juce::TooltipWindow tooltipWindow { this, 900 };
     TimelineRulerComponent timelineRuler { *this };
     MixerAreaComponent mixerArea { *this };
+    ChannelRackPreviewComponent channelRackPreview { *this };
     juce::Label channelRackTrackLabel { {}, "Track" };
     juce::ComboBox channelRackTrackBox;
     juce::Label channelRackPluginLabel { {}, "Plugin" };
@@ -549,7 +595,7 @@ private:
     juce::Label inspectorRouteLabel { {}, "Routing: -" };
     juce::Label inspectorPluginLabel { {}, "Plugin: -" };
     juce::Label inspectorMeterLabel { {}, "OUT: -inf dB" };
-    juce::Label builtInSynthTargetLabel { {}, "4OSC: none on selected track" };
+    juce::Label builtInSynthTargetLabel { {}, "Built-in synth removed from this build" };
     juce::TextButton builtInSynthPresetInitButton { "Init" };
     juce::TextButton builtInSynthPresetWarmPadButton { "Warm Pad" };
     juce::TextButton builtInSynthPresetPunchBassButton { "Punch Bass" };
@@ -757,6 +803,7 @@ private:
     void runTransportPlaybackSafetyCheck();
     void paintTimelineRuler (juce::Graphics& g, juce::Rectangle<int> area);
     void paintMixerArea (juce::Graphics& g, juce::Rectangle<int> area);
+    void paintChannelRackPreview (juce::Graphics& g, juce::Rectangle<int> area);
     void paintStepSequencer (juce::Graphics& g, juce::Rectangle<int> area);
     void paintMidiPianoRoll (juce::Graphics& g, juce::Rectangle<int> area);
     void handleMidiPianoRollMouseDown (const juce::MouseEvent& e, int width, int height);
@@ -767,9 +814,14 @@ private:
     void handleStepSequencerMouseDown (const juce::MouseEvent& e, int width, int height);
     void handleStepSequencerMouseDrag (const juce::MouseEvent& e, int width, int height);
     void handleStepSequencerMouseUp (const juce::MouseEvent& e);
+    bool ensureAuxReturnTrackForBus (int busNumber);
+    bool assignMixerSendDestination (te::AudioTrack& track, int sendSlot, int busNumber);
+    bool setMixerSendLevelDb (te::AudioTrack& track, int sendSlot, float gainDb);
+    void showMixerSendDestinationMenu (te::AudioTrack& track, int sendSlot, juce::Rectangle<int> targetBounds);
     void handleMixerAreaMouseDown (const juce::MouseEvent& e, int width, int height);
     void handleMixerAreaMouseDrag (const juce::MouseEvent& e, int width, int height);
     void handleMixerAreaMouseUp (const juce::MouseEvent& e);
+    void handleChannelRackPreviewMouseDown (const juce::MouseEvent& e, int width, int height);
 
     void applyTrackHeightFromUI();
     void applyHorizontalScrollFromUI();

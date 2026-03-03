@@ -32,6 +32,9 @@ public:
         setColour (juce::TextButton::buttonOnColourId, juce::Colour::fromRGB (54, 146, 224));
         setColour (juce::TextButton::textColourOffId, juce::Colours::white.withAlpha (0.96f));
         setColour (juce::TextButton::textColourOnId, juce::Colours::white.withAlpha (0.96f));
+        setColour (juce::ToggleButton::tickColourId, juce::Colour::fromRGB (93, 179, 230));
+        setColour (juce::ToggleButton::tickDisabledColourId, juce::Colour::fromRGB (59, 79, 106));
+        setColour (juce::ToggleButton::textColourId, juce::Colours::white.withAlpha (0.92f));
         setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.92f));
         setColour (juce::Label::backgroundColourId, juce::Colours::transparentBlack);
         setColour (juce::Label::outlineColourId, juce::Colours::transparentBlack);
@@ -61,6 +64,11 @@ public:
         setColour (juce::PopupMenu::highlightedTextColourId, juce::Colours::white.withAlpha (0.98f));
         setColour (juce::PopupMenu::textColourId, juce::Colours::white.withAlpha (0.95f));
         setColour (juce::PopupMenu::headerTextColourId, juce::Colour::fromRGB (251, 186, 110));
+
+        setColour (juce::Toolbar::backgroundColourId, juce::Colour::fromRGB (10, 17, 27).withAlpha (0.90f));
+        setColour (juce::Toolbar::separatorColourId, juce::Colour::fromRGB (92, 130, 173).withAlpha (0.72f));
+        setColour (juce::Toolbar::buttonMouseOverBackgroundColourId, juce::Colour::fromRGB (66, 129, 191).withAlpha (0.46f));
+        setColour (juce::Toolbar::buttonMouseDownBackgroundColourId, juce::Colour::fromRGB (78, 167, 224).withAlpha (0.58f));
 
         setColour (juce::ScrollBar::thumbColourId, juce::Colour::fromRGB (77, 144, 214).withAlpha (0.90f));
         setColour (juce::ScrollBar::backgroundColourId, juce::Colour::fromRGB (12, 17, 26).withAlpha (0.74f));
@@ -887,6 +895,10 @@ BeatMakerNoRecord::BeatMakerNoRecord()
     mixerSection.addAndMakeVisible (mixerArea);
     mixerSection.addAndMakeVisible (mixerToolsToolbar);
     mixerSection.addAndMakeVisible (channelRackGroup);
+    mixerSection.addAndMakeVisible (channelRackPreview);
+    mixerSection.addAndMakeVisible (mixerRackSplitter);
+    mixerSection.addAndMakeVisible (rackInspectorSplitter);
+    mixerSection.addAndMakeVisible (channelRackControlsSplitter);
     mixerSection.addAndMakeVisible (inspectorGroup);
     mixerSection.addAndMakeVisible (builtInSynthGroup);
     mixerSection.addAndMakeVisible (channelRackTrackLabel);
@@ -1259,12 +1271,12 @@ void BeatMakerNoRecord::setupCallbacks()
     fxScanButton.onClick = [this] { openPluginScanDialog(); };
     fxScanSkippedButton.onClick = [this] { scanSkippedPlugins(); };
     fxPrepPlaybackButton.onClick = [this] { prepareEditForPluginPlayback (true); };
-    fxAddSamplerButton.onClick = [this] { addBuiltInPluginToSelectedTrack ("sampler", "Sampler"); };
-    fxAddSynthButton.onClick = [this] { addBuiltInPluginToSelectedTrack ("4osc", "4OSC"); };
-    fxAddEQButton.onClick = [this] { addBuiltInPluginToSelectedTrack ("4bandEq", "EQ"); };
-    fxAddCompButton.onClick = [this] { addBuiltInPluginToSelectedTrack ("compressor", "Compressor"); };
-    fxAddReverbButton.onClick = [this] { addBuiltInPluginToSelectedTrack ("reverb", "Reverb"); };
-    fxAddDelayButton.onClick = [this] { addBuiltInPluginToSelectedTrack ("delay", "Delay"); };
+    fxAddSamplerButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
+    fxAddSynthButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
+    fxAddEQButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
+    fxAddCompButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
+    fxAddReverbButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
+    fxAddDelayButton.onClick = [this] { setStatus ("Built-in plugins are removed from this build."); };
     fxAddExternalInstrumentButton.onClick = [this] { addExternalInstrumentPluginToSelectedTrack(); };
     fxAddExternalButton.onClick = [this] { addExternalPluginToSelectedTrack(); };
     fxOpenEditorButton.onClick = [this] { openSelectedTrackPluginEditor(); };
@@ -1309,13 +1321,17 @@ void BeatMakerNoRecord::setupCallbacks()
 
         auto plugins = track->pluginList.getPlugins();
         const int selectedIndex = channelRackPluginBox.getSelectedId() - 1;
-        if (selectedIndex < 0 || selectedIndex >= plugins.size())
+        if (selectedIndex < 0 || selectedIndex >= channelRackPluginIndexMap.size())
             return;
 
-        if (auto* plugin = plugins[selectedIndex].get())
+        const int pluginIndex = channelRackPluginIndexMap.getUnchecked (selectedIndex);
+        if (pluginIndex < 0 || pluginIndex >= plugins.size())
+            return;
+
+        if (auto* plugin = plugins[pluginIndex].get())
         {
             selectionManager.selectOnly (plugin);
-            fxChainBox.setSelectedId (selectedIndex + 1, juce::dontSendNotification);
+            fxChainBox.setSelectedId (pluginIndex + 1, juce::dontSendNotification);
         }
 
         updateButtonsFromState();
@@ -1362,6 +1378,20 @@ void BeatMakerNoRecord::setupCallbacks()
         properties.setValue ("layoutWorkspaceBottomRatio", workspaceBottomHeightRatio);
         properties.setValue ("layoutMixerPianoRatio", mixerPianoHeightRatio);
         properties.setValue ("layoutPianoStepRatio", pianoStepHeightRatio);
+        properties.setValue ("layoutMixerRackRatio", mixerRackHeightRatio);
+        properties.setValue ("layoutRackInspectorRatio", rackInspectorWidthRatio);
+        properties.setValue ("layoutRackControlsRatio", channelRackControlsHeightRatio);
+    };
+
+    auto relayoutMixerSection = [this]
+    {
+        if (mixerSection.isShowing())
+            layoutSectionContent (FloatSection::mixer, mixerSection.getLocalBounds());
+
+        if (isSectionFloating (FloatSection::mixer))
+            mixerSection.repaint();
+        else
+            resized();
     };
 
     leftDockSplitter.onDeltaDrag = [this, persistLayoutRatios] (int delta)
@@ -1420,6 +1450,48 @@ void BeatMakerNoRecord::setupCallbacks()
         mixerPianoHeightRatio = (float) nextHeight / (float) juce::jmax (1, currentBottomDockHeightForResize);
         persistLayoutRatios();
         resized();
+    };
+
+    mixerRackSplitter.onDeltaDrag = [this, persistLayoutRatios, relayoutMixerSection] (int delta)
+    {
+        if (currentMixerSectionHeightForResize <= 0)
+            return;
+
+        const int minMixerHeight = 140;
+        const int maxMixerHeight = juce::jmax (minMixerHeight, currentMixerSectionHeightForResize - 150);
+        const int currentHeight = juce::roundToInt (mixerRackHeightRatio * (float) currentMixerSectionHeightForResize);
+        const int nextHeight = juce::jlimit (minMixerHeight, maxMixerHeight, currentHeight + delta);
+        mixerRackHeightRatio = (float) nextHeight / (float) juce::jmax (1, currentMixerSectionHeightForResize);
+        persistLayoutRatios();
+        relayoutMixerSection();
+    };
+
+    rackInspectorSplitter.onDeltaDrag = [this, persistLayoutRatios, relayoutMixerSection] (int delta)
+    {
+        if (currentRackSectionWidthForResize <= 0)
+            return;
+
+        const int minRackWidth = juce::jmax (120, currentRackSectionWidthForResize / 4);
+        const int maxRackWidth = juce::jmax (minRackWidth, currentRackSectionWidthForResize - juce::jmax (120, currentRackSectionWidthForResize / 4));
+        const int currentWidth = juce::roundToInt (rackInspectorWidthRatio * (float) currentRackSectionWidthForResize);
+        const int nextWidth = juce::jlimit (minRackWidth, maxRackWidth, currentWidth + delta);
+        rackInspectorWidthRatio = (float) nextWidth / (float) juce::jmax (1, currentRackSectionWidthForResize);
+        persistLayoutRatios();
+        relayoutMixerSection();
+    };
+
+    channelRackControlsSplitter.onDeltaDrag = [this, persistLayoutRatios, relayoutMixerSection] (int delta)
+    {
+        if (currentChannelRackSectionHeightForResize <= 0)
+            return;
+
+        const int minControlsHeight = 90;
+        const int maxControlsHeight = juce::jmax (minControlsHeight, currentChannelRackSectionHeightForResize - 120);
+        const int currentHeight = juce::roundToInt (channelRackControlsHeightRatio * (float) currentChannelRackSectionHeightForResize);
+        const int nextHeight = juce::jlimit (minControlsHeight, maxControlsHeight, currentHeight + delta);
+        channelRackControlsHeightRatio = (float) nextHeight / (float) juce::jmax (1, currentChannelRackSectionHeightForResize);
+        persistLayoutRatios();
+        relayoutMixerSection();
     };
 
     pianoStepSplitter.onDeltaDrag = [this, persistLayoutRatios] (int delta)

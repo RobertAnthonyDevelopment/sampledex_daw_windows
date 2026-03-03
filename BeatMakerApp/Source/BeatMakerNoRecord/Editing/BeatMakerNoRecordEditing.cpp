@@ -42,6 +42,60 @@ bool isAudioUnitFormatName (const juce::String& formatName)
         || formatName.containsIgnoreCase ("AUDIOUNIT");
 }
 
+bool isRemovedBuiltInPluginType (const juce::String& pluginType)
+{
+    const auto type = pluginType.trim().toLowerCase();
+    return type == "4osc"
+        || type == "sampler"
+        || type == "4bandeq"
+        || type == "compressor"
+        || type == "reverb"
+        || type == "delay";
+}
+
+bool isRemovedBuiltInPlugin (te::Plugin* plugin)
+{
+    if (plugin == nullptr)
+        return false;
+
+    // Only remove legacy internal plugins. External AU/VST3 plugins may use
+    // generic type names (e.g. "reverb") and must stay in user chains.
+    if (dynamic_cast<te::ExternalPlugin*> (plugin) != nullptr)
+        return false;
+
+    return isRemovedBuiltInPluginType (plugin->getPluginType());
+}
+
+bool isExternalInstrumentPlugin (te::Plugin* plugin)
+{
+    return plugin != nullptr
+        && plugin->isSynth()
+        && dynamic_cast<te::ExternalPlugin*> (plugin) != nullptr;
+}
+
+int removeRemovedBuiltInPluginsFromTrack (te::AudioTrack& track, juce::UndoManager* undoManager)
+{
+    int removed = 0;
+    auto plugins = track.pluginList.getPlugins();
+
+    for (int i = plugins.size(); --i >= 0;)
+    {
+        auto* plugin = plugins[i].get();
+        if (! isRemovedBuiltInPlugin (plugin))
+            continue;
+
+        auto state = plugin->state;
+        auto parent = state.getParent();
+        if (! parent.isValid())
+            continue;
+
+        parent.removeChild (state, undoManager);
+        ++removed;
+    }
+
+    return removed;
+}
+
 std::optional<juce::PluginDescription> findPreferredExternalInstrument (const juce::Array<juce::PluginDescription>& knownTypes,
                                                                         bool allowAuFallback)
 {
@@ -448,7 +502,7 @@ void BeatMakerNoRecord::openMidiClipInPianoRoll (te::MidiClip& midiClip, bool fl
         status << " | No instrument available.";
 
     if (addedPlaybackInstrument)
-        status << " (auto-added built-in synth for playback)";
+        status << " (auto-added external instrument for playback)";
 
     setStatus (status);
 }
@@ -467,7 +521,6 @@ void BeatMakerNoRecord::addFloatingSynthTrack()
 
     selectionManager.selectOnly (track);
 
-    // Prefer the bundled external synth for this dedicated floating instrument workflow.
     const int synthCountBefore = [&track]
     {
         int count = 0;
@@ -477,10 +530,8 @@ void BeatMakerNoRecord::addFloatingSynthTrack()
         return count;
     }();
 
-    addBundledNovaSynthToSelectedTrack();
-
-    if (! trackHasInstrumentPlugin (*track))
-        ensureTrackHasInstrumentForMidiPlayback (*track);
+    addExternalInstrumentPluginToSelectedTrack();
+    ensureTrackHasInstrumentForMidiPlayback (*track);
 
     createMidiClip();
 
@@ -1181,26 +1232,7 @@ bool BeatMakerNoRecord::applyChordScaleDirectoryToClip (te::MidiClip& midiClip,
 
     te::Plugin* previewSynth = nullptr;
     if (previewMode)
-    {
-        for (auto* plugin : ownerTrack->pluginList.getPlugins())
-        {
-            if (isBuiltInSynthPlugin (plugin))
-            {
-                previewSynth = plugin;
-                break;
-            }
-        }
-
-        if (previewSynth == nullptr)
-        {
-            if (auto plugin = edit->getPluginCache().createNewPlugin ("4osc", {}))
-            {
-                ownerTrack->pluginList.insertPlugin (plugin, getPluginInsertIndexForTrack (*ownerTrack, true), nullptr);
-                plugin->setEnabled (true);
-                previewSynth = plugin.get();
-            }
-        }
-    }
+        previewSynth = getPreferredEnabledInstrumentPlugin (*ownerTrack);
 
     const auto timeSignature = getTimeSignatureFromId (chordDirectoryTimeSignatureBox.getSelectedId());
     const int numerator = juce::jmax (1, timeSignature.first);
@@ -1220,17 +1252,11 @@ bool BeatMakerNoRecord::applyChordScaleDirectoryToClip (te::MidiClip& midiClip,
     const bool arpDensity = chordDirectoryDensityBox.getSelectedId() == 4;
     const bool arpMode = arpDensity || voicing == DirectoryVoicing::arpPulse;
 
-    if (previewMode && previewSynth != nullptr)
+    if (previewMode && previewSynth == nullptr)
     {
-        switch (chordDirectoryPreviewPresetBox.getSelectedId())
-        {
-            case 2: applyBuiltInSynthPresetToPlugin (*previewSynth, BuiltInSynthPreset::init); break;
-            case 3: applyBuiltInSynthPresetToPlugin (*previewSynth, BuiltInSynthPreset::warmPad); break;
-            case 4: applyBuiltInSynthPresetToPlugin (*previewSynth, BuiltInSynthPreset::punchBass); break;
-            case 5: applyBuiltInSynthPresetToPlugin (*previewSynth, BuiltInSynthPreset::brightPluck); break;
-            case 1:
-            default: break;
-        }
+        if (outSummary != nullptr)
+            *outSummary = "No external instrument is enabled on this track.";
+        return false;
     }
 
     if (scaleSemitones.empty() || progressionDegrees.empty())
@@ -2032,6 +2058,10 @@ void BeatMakerNoRecord::refreshSelectedTrackPluginList()
     auto* track = getSelectedTrackOrFirst();
     if (track != nullptr)
     {
+        const int removedBuiltIns = removeRemovedBuiltInPluginsFromTrack (*track, edit != nullptr ? &edit->getUndoManager() : nullptr);
+        if (removedBuiltIns > 0)
+            markPlaybackRoutingNeedsPreparation();
+
         auto plugins = track->pluginList.getPlugins();
         int selectedID = 0;
         int itemID = 1;
@@ -2372,61 +2402,15 @@ void BeatMakerNoRecord::openSelectedTrackPluginEditor()
 
 void BeatMakerNoRecord::addBuiltInPluginToSelectedTrack (const juce::String& pluginType, const juce::String& displayName)
 {
-    if (edit == nullptr)
-        return;
-
-    if (edit->getTransport().isPlaying())
-    {
-        setStatus ("Stop playback before inserting plugins.");
-        return;
-    }
-
-    auto* track = getSelectedTrackOrFirst();
-    if (track == nullptr)
-        return;
-
-    auto plugin = edit->getPluginCache().createNewPlugin (pluginType, {});
-    if (plugin == nullptr)
-    {
-        setStatus ("Failed to create plugin: " + displayName);
-        return;
-    }
-
-    const bool isInstrument = pluginType == "sampler" || pluginType == "4osc";
-    const int insertIndex = getPluginInsertIndexForTrack (*track, isInstrument);
-    track->pluginList.insertPlugin (plugin, insertIndex, &selectionManager);
-    plugin->setEnabled (true);
-
-    if (isInstrument)
-    {
-        for (auto* other : track->pluginList.getPlugins())
-        {
-            if (other == nullptr || other == plugin.get() || ! other->isSynth())
-                continue;
-
-            other->setEnabled (false);
-        }
-    }
-
-    if (pluginType == "4osc")
-        applyBuiltInSynthPresetToPlugin (*plugin, BuiltInSynthPreset::warmPad);
-
-    refreshSelectedTrackPluginList();
-
-    const int insertedIndex = track->pluginList.indexOf (plugin.get());
-    if (insertedIndex >= 0)
-        fxChainBox.setSelectedId (insertedIndex + 1, juce::dontSendNotification);
-
-    markPlaybackRoutingNeedsPreparation();
-    updateButtonsFromState();
-    setStatus ("Added plugin: " + displayName + " on " + track->getName());
+    juce::ignoreUnused (pluginType, displayName);
+    setStatus ("Built-in synth/effect plugins are removed from this build. Use AU/VST3 plugins.");
 }
 
 bool BeatMakerNoRecord::trackHasInstrumentPlugin (te::AudioTrack& track) const
 {
     auto plugins = track.pluginList.getPlugins();
     for (auto* plugin : plugins)
-        if (plugin != nullptr && plugin->isSynth() && plugin->isEnabled())
+        if (isExternalInstrumentPlugin (plugin) && plugin->isEnabled())
             return true;
 
     return false;
@@ -2454,29 +2438,13 @@ bool BeatMakerNoRecord::enableExistingInstrumentForDefaultMode (te::AudioTrack& 
         if (plugin == nullptr || ! plugin->isSynth() || plugin->isEnabled())
             continue;
 
-        bool shouldEnable = false;
-        switch (mode)
-        {
-            case DefaultSynthMode::force4Osc:
-            {
-                shouldEnable = plugin->getPluginType().equalsIgnoreCase ("4osc");
-                break;
-            }
+        auto* external = dynamic_cast<te::ExternalPlugin*> (plugin);
+        if (external == nullptr)
+            continue;
 
-            case DefaultSynthMode::forceExternalVst3:
-            {
-                if (auto* external = dynamic_cast<te::ExternalPlugin*> (plugin))
-                    shouldEnable = external->isVST3();
-                break;
-            }
-
-            case DefaultSynthMode::autoPreferExternal:
-            default:
-            {
-                shouldEnable = true;
-                break;
-            }
-        }
+        bool shouldEnable = true;
+        if (mode == DefaultSynthMode::forceExternalVst3)
+            shouldEnable = external->isVST3();
 
         if (! shouldEnable)
             continue;
@@ -2495,34 +2463,19 @@ bool BeatMakerNoRecord::insertInstrumentForDefaultMode (te::AudioTrack& track,
 {
     const auto knownTypes = engine.getPluginManager().knownPluginList.getTypes();
     const bool allowAuFallback = (mode == DefaultSynthMode::autoPreferExternal);
-    const bool tryExternalInstrument = (mode != DefaultSynthMode::force4Osc);
 
-    if (tryExternalInstrument)
+    if (const auto preferred = findPreferredExternalInstrument (knownTypes, allowAuFallback))
     {
-        if (const auto preferred = findPreferredExternalInstrument (knownTypes, allowAuFallback))
+        if (auto plugin = edit->getPluginCache().createNewPlugin (te::ExternalPlugin::xmlTypeName, *preferred))
         {
-            if (auto plugin = edit->getPluginCache().createNewPlugin (te::ExternalPlugin::xmlTypeName, *preferred))
-            {
-                track.pluginList.insertPlugin (plugin, getPluginInsertIndexForTrack (track, true), nullptr);
-                plugin->setEnabled (true);
-                ++addedInstruments;
-                return true;
-            }
+            track.pluginList.insertPlugin (plugin, getPluginInsertIndexForTrack (track, true), nullptr);
+            plugin->setEnabled (true);
+            ++addedInstruments;
+            return true;
         }
     }
 
-    if (mode == DefaultSynthMode::forceExternalVst3)
-        return false;
-
-    auto plugin = edit->getPluginCache().createNewPlugin ("4osc", {});
-    if (plugin == nullptr)
-        return false;
-
-    track.pluginList.insertPlugin (plugin, getPluginInsertIndexForTrack (track, true), nullptr);
-    plugin->setEnabled (true);
-    applyBuiltInSynthPresetToPlugin (*plugin, BuiltInSynthPreset::warmPad);
-    ++addedInstruments;
-    return true;
+    return false;
 }
 
 te::Plugin* BeatMakerNoRecord::choosePreferredInstrumentPluginForMode (te::AudioTrack& track, DefaultSynthMode mode) const
@@ -2534,30 +2487,10 @@ te::Plugin* BeatMakerNoRecord::choosePreferredInstrumentPluginForMode (te::Audio
     te::Plugin* enabledFallback = nullptr;
     te::Plugin* anyFallback = nullptr;
 
-    const auto isPreferredForMode = [mode] (te::Plugin* plugin)
-    {
-        if (plugin == nullptr || ! plugin->isSynth())
-            return false;
-
-        switch (mode)
-        {
-            case DefaultSynthMode::force4Osc:
-                return plugin->getPluginType().equalsIgnoreCase ("4osc");
-
-            case DefaultSynthMode::forceExternalVst3:
-                if (auto* external = dynamic_cast<te::ExternalPlugin*> (plugin))
-                    return external->isVST3();
-                return false;
-
-            case DefaultSynthMode::autoPreferExternal:
-            default:
-                return dynamic_cast<te::ExternalPlugin*> (plugin) != nullptr;
-        }
-    };
-
     for (auto* plugin : plugins)
     {
-        if (plugin == nullptr || ! plugin->isSynth())
+        auto* external = dynamic_cast<te::ExternalPlugin*> (plugin);
+        if (external == nullptr || ! plugin->isSynth())
             continue;
 
         if (anyFallback == nullptr)
@@ -2567,7 +2500,8 @@ te::Plugin* BeatMakerNoRecord::choosePreferredInstrumentPluginForMode (te::Audio
         if (enabled && enabledFallback == nullptr)
             enabledFallback = plugin;
 
-        if (! isPreferredForMode (plugin))
+        const bool preferredForMode = (mode != DefaultSynthMode::forceExternalVst3) || external->isVST3();
+        if (! preferredForMode)
             continue;
 
         if (preferredAny == nullptr)
@@ -2600,7 +2534,7 @@ bool BeatMakerNoRecord::normalizeTrackInstrumentActivationForMode (te::AudioTrac
     bool changed = false;
     for (auto* plugin : track.pluginList.getPlugins())
     {
-        if (plugin == nullptr || ! plugin->isSynth())
+        if (! isExternalInstrumentPlugin (plugin))
             continue;
 
         const bool shouldEnable = (plugin == preferred);
@@ -2620,26 +2554,16 @@ bool BeatMakerNoRecord::prepareTrackForMidiPlayback (te::AudioTrack& track, int&
 {
     if (edit == nullptr || ! trackHasMidiContent (track))
         return false;
+    bool changed = false;
+    const int removedBuiltIns = removeRemovedBuiltInPluginsFromTrack (track, edit != nullptr ? &edit->getUndoManager() : nullptr);
+    if (removedBuiltIns > 0)
+        changed = true;
 
     const auto defaultMode = getDefaultSynthModeSelection();
-    bool changed = enableExistingInstrumentForDefaultMode (track, defaultMode, enabledInstruments);
+    changed = enableExistingInstrumentForDefaultMode (track, defaultMode, enabledInstruments) || changed;
 
     if (! trackHasInstrumentPlugin (track) && insertInstrumentForDefaultMode (track, defaultMode, addedInstruments))
         changed = true;
-
-    // Always guarantee a playable instrument path for MIDI tracks, even if forced
-    // external mode has no available plugins.
-    if (! trackHasInstrumentPlugin (track))
-    {
-        if (auto fallbackPlugin = edit->getPluginCache().createNewPlugin ("4osc", {}))
-        {
-            track.pluginList.insertPlugin (fallbackPlugin, getPluginInsertIndexForTrack (track, true), nullptr);
-            fallbackPlugin->setEnabled (true);
-            applyBuiltInSynthPresetToPlugin (*fallbackPlugin, BuiltInSynthPreset::warmPad);
-            ++addedInstruments;
-            changed = true;
-        }
-    }
 
     if (trackHasInstrumentPlugin (track))
         changed = normalizeTrackInstrumentActivationForMode (track, defaultMode, enabledInstruments) || changed;
@@ -2667,7 +2591,7 @@ bool BeatMakerNoRecord::normalizeTrackPluginOrderForPlayback (te::AudioTrack& tr
         {
             mixers.add (plugin->state);
         }
-        else if (plugin->isSynth())
+        else if (isExternalInstrumentPlugin (plugin))
         {
             instruments.add (plugin->state);
         }
@@ -2790,7 +2714,7 @@ int BeatMakerNoRecord::getPluginInsertIndexForTrack (te::AudioTrack& track, bool
         for (int i = 0; i < firstMixerPluginIndex; ++i)
         {
             auto* plugin = plugins[i].get();
-            if (plugin != nullptr && plugin->isSynth())
+            if (isExternalInstrumentPlugin (plugin))
                 insertIndex = i + 1;
             else
                 break;
@@ -2798,9 +2722,8 @@ int BeatMakerNoRecord::getPluginInsertIndexForTrack (te::AudioTrack& track, bool
     }
     else
     {
-        for (int i = 0; i < firstMixerPluginIndex; ++i)
-            if (auto* plugin = plugins[i].get(); plugin != nullptr && plugin->isSynth())
-                insertIndex = i + 1;
+        // FX inserts append at the end of user chain, just before mixer plugins.
+        insertIndex = firstMixerPluginIndex;
     }
 
     return juce::jlimit (0, firstMixerPluginIndex, insertIndex);
@@ -2817,22 +2740,7 @@ bool BeatMakerNoRecord::ensureTrackHasInstrumentForMidiPlayback (te::AudioTrack&
     int enabledInstruments = 0;
     int addedInstruments = 0;
     bool changed = prepareTrackForMidiPlayback (track, enabledInstruments, addedInstruments);
-    bool hasInstrumentNow = trackHasInstrumentPlugin (track);
-
-    if (! hasInstrumentNow)
-    {
-        auto fallbackPlugin = edit != nullptr ? edit->getPluginCache().createNewPlugin ("4osc", {}) : nullptr;
-        if (fallbackPlugin != nullptr)
-        {
-            track.pluginList.insertPlugin (fallbackPlugin, getPluginInsertIndexForTrack (track, true), nullptr);
-            fallbackPlugin->setEnabled (true);
-            applyBuiltInSynthPresetToPlugin (*fallbackPlugin, BuiltInSynthPreset::warmPad);
-            ++addedInstruments;
-            changed = true;
-            hasInstrumentNow = true;
-            setStatus ("No compatible external instrument found. Auto-added built-in 4OSC for MIDI playback.");
-        }
-    }
+    const bool hasInstrumentNow = trackHasInstrumentPlugin (track);
 
     if (changed)
     {
@@ -2840,8 +2748,13 @@ bool BeatMakerNoRecord::ensureTrackHasInstrumentForMidiPlayback (te::AudioTrack&
         markPlaybackRoutingNeedsPreparation();
     }
 
-    if (! hasInstrumentNow && getDefaultSynthModeSelection() == DefaultSynthMode::forceExternalVst3)
-        setStatus ("No VST3 instrument available in forced VST3 mode. Scan plugins or switch synth mode.");
+    if (! hasInstrumentNow)
+    {
+        if (getDefaultSynthModeSelection() == DefaultSynthMode::forceExternalVst3)
+            setStatus ("No VST3 instrument available in forced VST3 mode. Scan plugins or switch synth mode.");
+        else
+            setStatus ("No external instrument available for MIDI playback. Scan plugins or add an AU/VST3 instrument.");
+    }
 
     return changed;
 }
@@ -2968,15 +2881,23 @@ void BeatMakerNoRecord::addExternalInstrumentPluginToSelectedTrack()
         return;
     }
 
-    track->pluginList.insertPlugin (plugin, getPluginInsertIndexForTrack (*track, true), &selectionManager);
+    const bool behavesAsInstrument = isExternalInstrumentPlugin (plugin.get());
+    track->pluginList.insertPlugin (plugin,
+                                    getPluginInsertIndexForTrack (*track, behavesAsInstrument),
+                                    &selectionManager);
     plugin->setEnabled (true);
-    for (auto* other : track->pluginList.getPlugins())
-    {
-        if (other == nullptr || other == plugin.get() || ! other->isSynth())
-            continue;
 
-        other->setEnabled (false);
+    if (behavesAsInstrument)
+    {
+        for (auto* other : track->pluginList.getPlugins())
+        {
+            if (! isExternalInstrumentPlugin (other) || other == plugin.get())
+                continue;
+
+            other->setEnabled (false);
+        }
     }
+
     refreshSelectedTrackPluginList();
 
     const int insertedIndex = track->pluginList.indexOf (plugin.get());
@@ -2986,156 +2907,23 @@ void BeatMakerNoRecord::addExternalInstrumentPluginToSelectedTrack()
     markPlaybackRoutingNeedsPreparation();
     updateButtonsFromState();
     const auto loadElapsedMs = juce::roundToInt (juce::Time::getMillisecondCounterHiRes() - loadStartMs);
-    setStatus ("Added " + desc.pluginFormatName + " instrument: " + desc.name + " on " + track->getName()
-               + " (" + juce::String (loadElapsedMs) + " ms).");
+
+    if (behavesAsInstrument)
+    {
+        setStatus ("Added " + desc.pluginFormatName + " instrument: " + desc.name + " on " + track->getName()
+                   + " (" + juce::String (loadElapsedMs) + " ms).");
+    }
+    else
+    {
+        setStatus ("Loaded " + desc.pluginFormatName + " plugin from instrument menu as FX chain insert: "
+                   + desc.name + " on " + track->getName()
+                   + " (" + juce::String (loadElapsedMs) + " ms).");
+    }
 }
 
 void BeatMakerNoRecord::addBundledNovaSynthToSelectedTrack()
 {
-    if (edit == nullptr)
-        return;
-
-    if (edit->getTransport().isPlaying())
-    {
-        setStatus ("Stop playback before inserting plugins.");
-        return;
-    }
-
-    auto* track = getSelectedTrackOrFirst();
-    if (track == nullptr)
-    {
-        setStatus ("Select a track first.");
-        return;
-    }
-
-    auto& pluginManager = engine.getPluginManager();
-
-    auto findBundledDesc = [&pluginManager] () -> std::optional<juce::PluginDescription>
-    {
-        const auto allTypes = pluginManager.knownPluginList.getTypes();
-
-        std::optional<juce::PluginDescription> auFallback;
-        for (const auto& desc : allTypes)
-        {
-            if (! desc.isInstrument)
-                continue;
-
-            const bool isBundledNova = desc.name.containsIgnoreCase ("Sampledex Nova Synth")
-                || desc.descriptiveName.containsIgnoreCase ("Sampledex Nova Synth");
-            if (! isBundledNova)
-                continue;
-
-            if (isVst3FormatName (desc.pluginFormatName))
-                return desc;
-
-            if (isAudioUnitFormatName (desc.pluginFormatName) && ! auFallback.has_value())
-                auFallback = desc;
-        }
-
-        return auFallback;
-    };
-
-    auto chosen = findBundledDesc();
-    bool scannedLocalArtifact = false;
-
-    if (! chosen.has_value())
-    {
-        const auto executable = juce::File::getSpecialLocation (juce::File::currentExecutableFile);
-        juce::Array<juce::File> roots;
-        auto probe = executable.getParentDirectory();
-        for (int i = 0; i < 10 && probe.exists(); ++i)
-        {
-            roots.addIfNotAlreadyThere (probe);
-            probe = probe.getParentDirectory();
-        }
-
-        static const std::array<const char*, 10> relativeCandidates
-        {{
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/VST3/Sampledex Nova Synth.vst3",
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/Release/VST3/Sampledex Nova Synth.vst3",
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/Debug/VST3/Sampledex Nova Synth.vst3",
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/RelWithDebInfo/VST3/Sampledex Nova Synth.vst3",
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/MinSizeRel/VST3/Sampledex Nova Synth.vst3",
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/AU/Sampledex Nova Synth.component",
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/Release/AU/Sampledex Nova Synth.component",
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/Debug/AU/Sampledex Nova Synth.component",
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/RelWithDebInfo/AU/Sampledex Nova Synth.component",
-            "BundledSynth_SampledexNovaSynth_build/SampledexNovaSynth_artefacts/MinSizeRel/AU/Sampledex Nova Synth.component"
-        }};
-
-        for (auto& root : roots)
-        {
-            for (const auto* relativePath : relativeCandidates)
-            {
-                const auto artifact = root.getChildFile (relativePath);
-                if (! artifact.exists())
-                    continue;
-
-                for (int i = 0; i < pluginManager.pluginFormatManager.getNumFormats(); ++i)
-                {
-                    auto* format = pluginManager.pluginFormatManager.getFormat (i);
-                    if (format == nullptr)
-                        continue;
-
-                    const auto formatName = format->getName();
-                    const bool wantsVst3 = artifact.hasFileExtension ("vst3");
-                    const bool wantsAu = artifact.hasFileExtension ("component");
-                    const bool formatMatches = (wantsVst3 && isVst3FormatName (formatName))
-                        || (wantsAu && isAudioUnitFormatName (formatName));
-                    if (! formatMatches)
-                        continue;
-
-                    juce::OwnedArray<juce::PluginDescription> found;
-                    pluginManager.knownPluginList.scanAndAddFile (artifact.getFullPathName(), false, found, *format);
-                    scannedLocalArtifact = true;
-                }
-            }
-        }
-
-        chosen = findBundledDesc();
-    }
-
-    if (! chosen.has_value())
-    {
-        if (scannedLocalArtifact)
-            setStatus ("Bundled Sampledex Nova Synth scan completed but plugin wasn't loadable. Rebuild plugin target.");
-        else
-            setStatus ("Bundled Sampledex Nova Synth not found in scanned plugins. Build + scan plugins first.");
-
-        return;
-    }
-
-    setStatus ("Loading bundled synth: " + chosen->name + "...");
-    const auto loadStartMs = juce::Time::getMillisecondCounterHiRes();
-    WaitCursorScope waitCursor;
-    auto plugin = edit->getPluginCache().createNewPlugin (te::ExternalPlugin::xmlTypeName, *chosen);
-    if (plugin == nullptr)
-    {
-        setStatus ("Failed to load bundled synth: " + chosen->name);
-        return;
-    }
-
-    track->pluginList.insertPlugin (plugin, getPluginInsertIndexForTrack (*track, true), &selectionManager);
-    plugin->setEnabled (true);
-    for (auto* other : track->pluginList.getPlugins())
-    {
-        if (other == nullptr || other == plugin.get() || ! other->isSynth())
-            continue;
-
-        other->setEnabled (false);
-    }
-    refreshSelectedTrackPluginList();
-
-    const int insertedIndex = track->pluginList.indexOf (plugin.get());
-    if (insertedIndex >= 0)
-        fxChainBox.setSelectedId (insertedIndex + 1, juce::dontSendNotification);
-
-    markPlaybackRoutingNeedsPreparation();
-    updateButtonsFromState();
-
-    const auto loadElapsedMs = juce::roundToInt (juce::Time::getMillisecondCounterHiRes() - loadStartMs);
-    setStatus ("Added bundled synth: " + chosen->name + " (" + chosen->pluginFormatName + ", "
-               + juce::String (loadElapsedMs) + " ms).");
+    setStatus ("Bundled synth is removed from this build. Use Add AU/VST3 Instrument.");
 }
 
 void BeatMakerNoRecord::addExternalPluginToSelectedTrack()
@@ -3167,15 +2955,27 @@ void BeatMakerNoRecord::addExternalPluginToSelectedTrack()
 
     std::vector<juce::PluginDescription> auEffects;
     std::vector<juce::PluginDescription> vst3Effects;
+    std::vector<juce::PluginDescription> auInstrumentClassified;
+    std::vector<juce::PluginDescription> vst3InstrumentClassified;
 
     for (const auto& desc : allPlugins)
     {
-        if (desc.isInstrument)
-            continue;
-
         const auto format = desc.pluginFormatName.toUpperCase();
         const bool isVst3 = format.contains ("VST3");
         const bool isAu = format.contains ("AUDIOUNIT") || format == "AU";
+
+        if (! isVst3 && ! isAu)
+            continue;
+
+        if (desc.isInstrument)
+        {
+            if (isVst3)
+                vst3InstrumentClassified.push_back (desc);
+            else
+                auInstrumentClassified.push_back (desc);
+
+            continue;
+        }
 
         if (isVst3)
             vst3Effects.push_back (desc);
@@ -3183,9 +2983,9 @@ void BeatMakerNoRecord::addExternalPluginToSelectedTrack()
             auEffects.push_back (desc);
     }
 
-    if (auEffects.empty() && vst3Effects.empty())
+    if (auEffects.empty() && vst3Effects.empty() && auInstrumentClassified.empty() && vst3InstrumentClassified.empty())
     {
-        setStatus ("No AU/VST3 effects available. Scan plugins and ensure effects are installed.");
+        setStatus ("No AU/VST3 plugins available. Scan plugins and ensure effects are installed.");
         return;
     }
 
@@ -3200,16 +3000,25 @@ void BeatMakerNoRecord::addExternalPluginToSelectedTrack()
 
     std::sort (auEffects.begin(), auEffects.end(), byNameThenManufacturer);
     std::sort (vst3Effects.begin(), vst3Effects.end(), byNameThenManufacturer);
+    std::sort (auInstrumentClassified.begin(), auInstrumentClassified.end(), byNameThenManufacturer);
+    std::sort (vst3InstrumentClassified.begin(), vst3InstrumentClassified.end(), byNameThenManufacturer);
 
     juce::PopupMenu menu;
     menu.addSectionHeader ("Add External Effect");
 
-    std::vector<juce::PluginDescription> choiceById;
-    choiceById.reserve (auEffects.size() + vst3Effects.size());
+    struct FxMenuChoice
+    {
+        juce::PluginDescription description;
+        bool instrumentClassified = false;
+    };
+
+    std::vector<FxMenuChoice> choiceById;
+    choiceById.reserve (auEffects.size() + vst3Effects.size() + auInstrumentClassified.size() + vst3InstrumentClassified.size());
     int itemId = 1;
 
     auto populateSubmenu = [&choiceById, &itemId] (juce::PopupMenu& subMenu,
-                                                   const std::vector<juce::PluginDescription>& list)
+                                                   const std::vector<juce::PluginDescription>& list,
+                                                   bool instrumentClassified)
     {
         for (const auto& desc : list)
         {
@@ -3220,8 +3029,11 @@ void BeatMakerNoRecord::addExternalPluginToSelectedTrack()
             if (desc.manufacturerName.trim().isNotEmpty())
                 label << " - " << desc.manufacturerName.trim();
 
+            if (instrumentClassified)
+                label << " [Inst-flagged]";
+
             subMenu.addItem (itemId, label);
-            choiceById.push_back (desc);
+            choiceById.push_back ({ desc, instrumentClassified });
             ++itemId;
         }
     };
@@ -3229,15 +3041,35 @@ void BeatMakerNoRecord::addExternalPluginToSelectedTrack()
     if (! vst3Effects.empty())
     {
         juce::PopupMenu vstMenu;
-        populateSubmenu (vstMenu, vst3Effects);
+        populateSubmenu (vstMenu, vst3Effects, false);
         menu.addSubMenu ("VST3 Effects", vstMenu, true);
     }
 
     if (! auEffects.empty())
     {
         juce::PopupMenu auMenu;
-        populateSubmenu (auMenu, auEffects);
+        populateSubmenu (auMenu, auEffects, false);
         menu.addSubMenu ("AU Effects", auMenu, true);
+    }
+
+    if (! vst3InstrumentClassified.empty() || ! auInstrumentClassified.empty())
+    {
+        menu.addSeparator();
+        menu.addSectionHeader ("Instrument-Classified Plugins (Insert As FX)");
+
+        if (! vst3InstrumentClassified.empty())
+        {
+            juce::PopupMenu vstMenu;
+            populateSubmenu (vstMenu, vst3InstrumentClassified, true);
+            menu.addSubMenu ("VST3 Inst-Flagged", vstMenu, true);
+        }
+
+        if (! auInstrumentClassified.empty())
+        {
+            juce::PopupMenu auMenu;
+            populateSubmenu (auMenu, auInstrumentClassified, true);
+            menu.addSubMenu ("AU Inst-Flagged", auMenu, true);
+        }
     }
 
     const int selectedItem = menu.showMenu (juce::PopupMenu::Options().withTargetComponent (&fxAddExternalButton)
@@ -3249,7 +3081,8 @@ void BeatMakerNoRecord::addExternalPluginToSelectedTrack()
     if (selectedIndex >= choiceById.size())
         return;
 
-    const auto& desc = choiceById[selectedIndex];
+    const auto& choice = choiceById[selectedIndex];
+    const auto& desc = choice.description;
     setStatus ("Loading effect plugin: " + desc.name + "...");
     const auto loadStartMs = juce::Time::getMillisecondCounterHiRes();
     WaitCursorScope waitCursor;
@@ -3271,8 +3104,13 @@ void BeatMakerNoRecord::addExternalPluginToSelectedTrack()
     markPlaybackRoutingNeedsPreparation();
     updateButtonsFromState();
     const auto loadElapsedMs = juce::roundToInt (juce::Time::getMillisecondCounterHiRes() - loadStartMs);
-    setStatus ("Added " + desc.pluginFormatName + " effect: " + desc.name + " on " + track->getName()
-               + " (" + juce::String (loadElapsedMs) + " ms).");
+
+    juce::String status = "Added " + desc.pluginFormatName + " effect: " + desc.name + " on " + track->getName();
+    if (choice.instrumentClassified || plugin->isSynth())
+        status << " (forced into FX chain)";
+
+    status << " (" << juce::String (loadElapsedMs) << " ms).";
+    setStatus (status);
 }
 
 void BeatMakerNoRecord::moveSelectedTrackPlugin (bool moveDown)

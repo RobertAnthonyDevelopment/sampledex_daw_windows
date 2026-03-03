@@ -963,6 +963,23 @@ enum MenuCommandIds
     menuViewPanelsEditing,
     menuViewPanelsSound,
 
+    menuWindowPanelWorkspace,
+    menuWindowPanelMixer,
+    menuWindowPanelPiano,
+    menuWindowPanelArrangement,
+    menuWindowPanelTracks,
+    menuWindowPanelClipEditing,
+    menuWindowPanelMidiEditing,
+    menuWindowPanelAudioEditing,
+    menuWindowPanelFxChain,
+    menuWindowPanelTrackMixer,
+    menuWindowPanelMixerArea,
+    menuWindowPanelChannelRack,
+    menuWindowPanelInspector,
+    menuWindowPanelPianoRoll,
+    menuWindowPanelStepSequencer,
+    menuWindowShowAllPanels,
+
     menuHelpShortcuts
 };
 
@@ -970,10 +987,26 @@ struct MixerStripLayout
 {
     juce::Rectangle<int> strip;
     juce::Rectangle<int> header;
+    juce::Rectangle<int> settingButton;
+    juce::Rectangle<int> instrumentSlot;
+    juce::Rectangle<int> insertsArea;
+    juce::Rectangle<int> automationButton;
     juce::Rectangle<int> muteButton;
     juce::Rectangle<int> soloButton;
     juce::Rectangle<int> faderTrack;
     juce::Rectangle<int> panTrack;
+};
+
+constexpr int mixerSendSlotCount = 2;
+constexpr int mixerMaxAuxDestinationCount = 8;
+const juce::Identifier mixerSendSlotPropertyId ("sampledexSendSlot");
+
+struct MixerSendLaneLayout
+{
+    juce::Rectangle<int> row;
+    juce::Rectangle<int> slotBadge;
+    juce::Rectangle<int> routeText;
+    juce::Rectangle<int> levelLane;
 };
 
 struct MixerRoutingLayout
@@ -987,19 +1020,19 @@ struct MixerRoutingLayout
 MixerRoutingLayout getMixerRoutingLayout (juce::Rectangle<int> localArea)
 {
     MixerRoutingLayout layout;
-    auto inner = localArea.reduced (6, 5);
+    auto inner = localArea.reduced (8, 6);
 
     const int busWidth = inner.getWidth() < 360
-                             ? juce::jlimit (92, 128, inner.getWidth() / 3)
-                             : juce::jlimit (120, 176, inner.getWidth() / 4);
+                             ? juce::jlimit (98, 136, inner.getWidth() / 3)
+                             : juce::jlimit (132, 208, inner.getWidth() / 4);
 
     layout.busArea = inner.removeFromRight (busWidth);
-    inner.removeFromRight (8);
+    inner.removeFromRight (10);
     layout.stripsArea = inner;
     layout.busArea = layout.busArea.reduced (2, 2);
 
-    layout.railX = layout.busArea.getX() + juce::jlimit (14, 24, layout.busArea.getWidth() / 6);
-    layout.meterArea = layout.busArea.withTrimmedTop (34).withTrimmedBottom (26).removeFromRight (24).reduced (2, 0);
+    layout.railX = layout.busArea.getX() + juce::jlimit (15, 27, layout.busArea.getWidth() / 5);
+    layout.meterArea = layout.busArea.withTrimmedTop (42).withTrimmedBottom (34).removeFromRight (28).reduced (3, 0);
     return layout;
 }
 
@@ -1009,29 +1042,167 @@ MixerStripLayout getMixerStripLayout (juce::Rectangle<int> area, int trackIndex,
     if (trackCount <= 0)
         return layout;
 
-    constexpr int stripGap = 8;
+    const int stripGap = area.getWidth() < 620 ? 4 : (area.getWidth() < 980 ? 6 : 8);
     const int availableWidth = area.getWidth() - juce::jmax (0, trackCount - 1) * stripGap;
-    const int stripWidth = juce::jlimit (82, 148, availableWidth / juce::jmax (1, trackCount));
+    const int stripWidth = juce::jlimit (68, 174, availableWidth / juce::jmax (1, trackCount));
     const int totalWidth = stripWidth * trackCount + stripGap * juce::jmax (0, trackCount - 1);
     const int startX = area.getX() + juce::jmax (0, (area.getWidth() - totalWidth) / 2);
 
-    layout.strip = { startX + trackIndex * (stripWidth + stripGap), area.getY() + 2, stripWidth, juce::jmax (26, area.getHeight() - 4) };
+    layout.strip = { startX + trackIndex * (stripWidth + stripGap), area.getY() + 3, stripWidth, juce::jmax (26, area.getHeight() - 6) };
 
     auto inner = layout.strip.reduced (6, 6);
-    layout.header = inner.removeFromTop (20);
+    layout.header = inner.removeFromTop (22);
+    inner.removeFromTop (2);
 
-    auto buttons = inner.removeFromTop (20);
-    layout.muteButton = buttons.removeFromLeft (buttons.getWidth() / 2).reduced (1, 2);
-    layout.soloButton = buttons.reduced (1, 2);
+    layout.settingButton = inner.removeFromTop (18).reduced (0, 1);
+    inner.removeFromTop (2);
 
+    layout.instrumentSlot = inner.removeFromTop (18).reduced (0, 1);
+    inner.removeFromTop (5);
+
+    const int minBottomControlsHeight = 72;
+    const int maxInsertHeight = juce::jmax (24, inner.getHeight() - minBottomControlsHeight);
+    const int minInsertHeight = juce::jmin (36, maxInsertHeight);
+    const int targetInsertHeight = roundToInt ((float) inner.getHeight() * 0.44f);
+    const int insertsHeight = juce::jlimit (minInsertHeight, maxInsertHeight, targetInsertHeight);
+    layout.insertsArea = inner.removeFromTop (insertsHeight);
     inner.removeFromTop (4);
-    auto panZone = inner.removeFromBottom (30);
-    inner.removeFromBottom (5);
 
-    layout.faderTrack = { inner.getCentreX() - 4, inner.getY(), 8, juce::jmax (18, inner.getHeight()) };
-    layout.panTrack = panZone.reduced (4, 11);
+    auto modeRow = inner.removeFromTop (20);
+    const int modeWidth = juce::jmax (18, modeRow.getWidth() / 3);
+    layout.automationButton = modeRow.removeFromLeft (modeWidth).reduced (1, 1);
+    layout.muteButton = modeRow.removeFromLeft (modeWidth).reduced (1, 1);
+    layout.soloButton = modeRow.reduced (1, 1);
+
+    inner.removeFromTop (5);
+    auto panZone = inner.removeFromBottom (30);
+    inner.removeFromBottom (4);
+
+    layout.faderTrack = { inner.getCentreX() - 5, inner.getY(), 10, juce::jmax (24, inner.getHeight()) };
+    layout.panTrack = panZone.reduced (5, 9);
 
     return layout;
+}
+
+int getMixerSendBandHeightForInsertArea (juce::Rectangle<int> insertArea)
+{
+    return juce::jlimit (16, 28, juce::jmax (14, insertArea.getHeight() / 4));
+}
+
+juce::Rectangle<int> getMixerInsertAreaWithoutSends (const MixerStripLayout& layout)
+{
+    auto insertArea = layout.insertsArea;
+    insertArea.removeFromBottom (juce::jmin (getMixerSendBandHeightForInsertArea (insertArea), insertArea.getHeight()));
+    if (insertArea.getHeight() > 2)
+        insertArea.removeFromBottom (2);
+    return insertArea;
+}
+
+std::array<MixerSendLaneLayout, mixerSendSlotCount> getMixerSendLaneLayouts (const MixerStripLayout& layout)
+{
+    std::array<MixerSendLaneLayout, mixerSendSlotCount> lanes {};
+
+    auto insertArea = layout.insertsArea;
+    auto sendsArea = insertArea.removeFromBottom (juce::jmin (getMixerSendBandHeightForInsertArea (insertArea), insertArea.getHeight()));
+    if (sendsArea.isEmpty())
+        return lanes;
+
+    auto rowA = sendsArea.removeFromTop (juce::jmax (8, (sendsArea.getHeight() - 2) / 2));
+    if (sendsArea.getHeight() > 2)
+        sendsArea.removeFromTop (2);
+
+    const std::array<juce::Rectangle<int>, mixerSendSlotCount> rows { rowA, sendsArea };
+
+    for (int slot = 0; slot < mixerSendSlotCount; ++slot)
+    {
+        auto row = rows[(size_t) slot];
+        if (row.isEmpty())
+            continue;
+
+        auto content = row.reduced (3, 2);
+        auto badge = content.removeFromLeft (juce::jlimit (14, 22, juce::jmax (14, row.getWidth() / 4)));
+        auto level = content.removeFromRight (juce::jlimit (20, 48, juce::jmax (18, row.getWidth() / 3)));
+
+        lanes[(size_t) slot].row = row;
+        lanes[(size_t) slot].slotBadge = badge.reduced (1, 0);
+        lanes[(size_t) slot].routeText = content.reduced (2, 0);
+        lanes[(size_t) slot].levelLane = level.reduced (2, 1);
+    }
+
+    return lanes;
+}
+
+struct MixerSendLookup
+{
+    std::array<te::AuxSendPlugin*, mixerSendSlotCount> slots {};
+};
+
+MixerSendLookup getMixerSendLookup (te::AudioTrack& track)
+{
+    MixerSendLookup lookup;
+    std::array<bool, mixerSendSlotCount> occupied {};
+    juce::Array<te::AuxSendPlugin*> unassigned;
+
+    for (auto* plugin : track.pluginList.getPlugins())
+    {
+        auto* send = dynamic_cast<te::AuxSendPlugin*> (plugin);
+        if (send == nullptr)
+            continue;
+
+        const int configuredSlot = (int) send->state.getProperty (mixerSendSlotPropertyId, -1);
+        if (juce::isPositiveAndBelow (configuredSlot, mixerSendSlotCount)
+            && lookup.slots[(size_t) configuredSlot] == nullptr)
+        {
+            lookup.slots[(size_t) configuredSlot] = send;
+            occupied[(size_t) configuredSlot] = true;
+        }
+        else
+        {
+            unassigned.add (send);
+        }
+    }
+
+    for (auto* send : unassigned)
+    {
+        for (int slot = 0; slot < mixerSendSlotCount; ++slot)
+        {
+            if (! occupied[(size_t) slot])
+            {
+                lookup.slots[(size_t) slot] = send;
+                occupied[(size_t) slot] = true;
+                break;
+            }
+        }
+    }
+
+    return lookup;
+}
+
+te::AudioTrack* findAuxReturnTrackForBus (te::Edit& edit, int busNumber)
+{
+    for (auto* track : te::getAudioTracks (edit))
+    {
+        if (track == nullptr)
+            continue;
+
+        for (auto* plugin : track->pluginList.getPlugins())
+        {
+            auto* auxReturn = dynamic_cast<te::AuxReturnPlugin*> (plugin);
+            if (auxReturn != nullptr && (int) auxReturn->busNumber.get() == busNumber)
+                return track;
+        }
+    }
+
+    return nullptr;
+}
+
+juce::String getMixerAuxBusDisplayName (te::Edit& edit, int busNumber)
+{
+    const auto customName = edit.getAuxBusName (busNumber).trim();
+    if (customName.isNotEmpty())
+        return customName;
+
+    return "Aux " + juce::String (busNumber + 1);
 }
 
 double getMixerVolumeNormalised (double volumeDb)
@@ -1053,6 +1224,19 @@ double getMixerPanFromX (int x, juce::Rectangle<int> panTrack)
                                        (double) (x - panTrack.getX())
                                        / (double) juce::jmax (1, panTrack.getWidth()));
     return juce::jmap (ratio, -1.0, 1.0);
+}
+
+double getMixerSendLevelNormalised (double gainDb)
+{
+    return juce::jlimit (0.0, 1.0, juce::jmap (gainDb, -60.0, 6.0, 0.0, 1.0));
+}
+
+double getMixerSendLevelDbFromX (int x, juce::Rectangle<int> lane)
+{
+    const double ratio = juce::jlimit (0.0, 1.0,
+                                       (double) (x - lane.getX())
+                                       / (double) juce::jmax (1, lane.getWidth()));
+    return juce::jmap (ratio, -60.0, 6.0);
 }
 
 double getVisibleTrackContentHeight (const te::Edit& edit, const EditViewState& viewState)
@@ -1109,12 +1293,80 @@ bool isMixerUtilityPlugin (const te::Plugin& plugin)
         || dynamic_cast<const te::LevelMeterPlugin*> (&plugin) != nullptr;
 }
 
+bool isExternalInstrumentPluginForUi (te::Plugin& plugin)
+{
+    return plugin.isSynth()
+        && dynamic_cast<te::ExternalPlugin*> (&plugin) != nullptr;
+}
+
+juce::String getCompactPluginLabel (te::Plugin& plugin, int maxChars = 16)
+{
+    juce::String label = plugin.getName().trim();
+    if (label.isEmpty())
+        label = plugin.getPluginType().trim();
+
+    if (! plugin.isEnabled())
+        label = "[Byp] " + label;
+
+    if (maxChars > 4 && label.length() > maxChars)
+        label = label.substring (0, juce::jmax (2, maxChars - 1)).trimEnd() + "…";
+
+    return label;
+}
+
+struct MixerPluginSlots
+{
+    juce::String instrument;
+    juce::StringArray inserts;
+    int hiddenInsertCount = 0;
+};
+
+MixerPluginSlots getMixerPluginSlots (te::AudioTrack& track, int maxInsertSlots)
+{
+    MixerPluginSlots slots;
+    maxInsertSlots = juce::jmax (1, maxInsertSlots);
+
+    for (auto* plugin : track.pluginList.getPlugins())
+    {
+        if (plugin == nullptr || isMixerUtilityPlugin (*plugin))
+            continue;
+
+        if (dynamic_cast<te::AuxSendPlugin*> (plugin) != nullptr
+            || dynamic_cast<te::AuxReturnPlugin*> (plugin) != nullptr)
+            continue;
+
+        if (isExternalInstrumentPluginForUi (*plugin))
+        {
+            if (slots.instrument.isEmpty())
+                slots.instrument = getCompactPluginLabel (*plugin, 18);
+            continue;
+        }
+
+        if (slots.inserts.size() < maxInsertSlots)
+            slots.inserts.add (getCompactPluginLabel (*plugin, 18));
+        else
+            ++slots.hiddenInsertCount;
+    }
+
+    return slots;
+}
+
+struct MixerSendUiState
+{
+    bool enabled = false;
+    int busNumber = -1;
+    float gainDb = 0.0f;
+    juce::String routeName;
+    bool hasReturnTrack = false;
+};
+
 struct MixerTrackUiState
 {
     float volumeDb = 0.0f;
     float pan = 0.0f;
     bool hasInstrument = false;
     int userFxCount = 0;
+    std::array<MixerSendUiState, mixerSendSlotCount> sends;
 };
 
 te::AudioTrack* getMidiClipOwnerTrack (te::MidiClip* midiClip)
@@ -1146,7 +1398,7 @@ te::Plugin* getFirstEnabledInstrumentPlugin (te::AudioTrack& track)
 {
     for (auto* plugin : track.pluginList.getPlugins())
     {
-        if (plugin != nullptr && plugin->isSynth() && plugin->isEnabled())
+        if (plugin != nullptr && isExternalInstrumentPluginForUi (*plugin) && plugin->isEnabled())
             return plugin;
     }
 
@@ -1193,19 +1445,83 @@ MixerTrackUiState getMixerTrackUiState (te::AudioTrack& track)
         state.pan = volumePlugin->getPan();
     }
 
+    const auto sendLookup = getMixerSendLookup (track);
+    for (int slot = 0; slot < mixerSendSlotCount; ++slot)
+    {
+        auto* send = sendLookup.slots[(size_t) slot];
+        if (send == nullptr)
+            continue;
+
+        auto& sendState = state.sends[(size_t) slot];
+        sendState.enabled = send->isEnabled();
+        sendState.busNumber = send->getBusNumber();
+        sendState.gainDb = send->getGainDb();
+        sendState.routeName = getMixerAuxBusDisplayName (track.edit, sendState.busNumber);
+        sendState.hasReturnTrack = sendState.enabled
+                                && findAuxReturnTrackForBus (track.edit, sendState.busNumber) != nullptr;
+    }
+
     for (auto* plugin : track.pluginList.getPlugins())
     {
         if (plugin == nullptr)
             continue;
 
-        if (plugin->isSynth() && plugin->isEnabled())
-            state.hasInstrument = true;
+        if (dynamic_cast<te::AuxSendPlugin*> (plugin) != nullptr
+            || dynamic_cast<te::AuxReturnPlugin*> (plugin) != nullptr)
+            continue;
 
-        if (! isMixerUtilityPlugin (*plugin))
-            ++state.userFxCount;
+        if (isExternalInstrumentPluginForUi (*plugin))
+        {
+            if (plugin->isEnabled())
+                state.hasInstrument = true;
+
+            continue;
+        }
+
+        if (isMixerUtilityPlugin (*plugin))
+            continue;
+
+        ++state.userFxCount;
     }
 
     return state;
+}
+
+struct ChannelRackStripLayout
+{
+    juce::Rectangle<int> strip;
+    juce::Rectangle<int> header;
+    juce::Rectangle<int> inserts;
+    juce::Rectangle<int> faderTrack;
+    juce::Rectangle<int> panZone;
+};
+
+ChannelRackStripLayout getChannelRackStripLayout (juce::Rectangle<int> area, int trackIndex, int trackCount)
+{
+    ChannelRackStripLayout layout;
+    if (trackCount <= 0)
+        return layout;
+
+    const int stripGap = area.getWidth() < 560 ? 3 : (area.getWidth() < 900 ? 5 : 7);
+    const int availableWidth = area.getWidth() - juce::jmax (0, trackCount - 1) * stripGap;
+    const int stripWidth = juce::jlimit (60, 138, availableWidth / juce::jmax (1, trackCount));
+    const int totalWidth = stripWidth * trackCount + stripGap * juce::jmax (0, trackCount - 1);
+    const int startX = area.getX() + juce::jmax (0, (area.getWidth() - totalWidth) / 2);
+
+    layout.strip = { startX + trackIndex * (stripWidth + stripGap), area.getY(), stripWidth, area.getHeight() };
+    auto inner = layout.strip.reduced (5, 6);
+
+    layout.header = inner.removeFromTop (22);
+    inner.removeFromTop (4);
+    auto bottom = inner.removeFromBottom (64);
+    layout.inserts = inner;
+
+    auto panRow = bottom.removeFromTop (20);
+    layout.panZone = panRow.reduced (3, 5);
+    bottom.removeFromTop (4);
+    layout.faderTrack = bottom.reduced (juce::jmax (2, (bottom.getWidth() - 9) / 2), 0).withWidth (9);
+
+    return layout;
 }
 
 void drawMixerModeButton (juce::Graphics& g,
@@ -1214,13 +1530,26 @@ void drawMixerModeButton (juce::Graphics& g,
                           bool isOn,
                           juce::Colour onColour)
 {
-    const auto fill = isOn ? onColour.withAlpha (0.86f) : juce::Colour::fromRGB (39, 50, 67);
-    g.setColour (fill);
-    g.fillRoundedRectangle (bounds.toFloat(), 4.0f);
-    g.setColour (juce::Colours::white.withAlpha (0.20f));
-    g.drawRoundedRectangle (bounds.toFloat(), 4.0f, 1.0f);
-    g.setColour (juce::Colours::white.withAlpha (isOn ? 0.98f : 0.80f));
-    g.setFont (juce::Font (juce::FontOptions (10.2f, juce::Font::bold)));
+    auto b = bounds.toFloat();
+    auto base = isOn ? onColour.withAlpha (0.92f) : juce::Colour::fromRGB (38, 48, 64).withAlpha (0.92f);
+
+    juce::ColourGradient fill (base.brighter (0.12f), b.getX(), b.getY(),
+                               base.darker (0.22f), b.getX(), b.getBottom(), false);
+    g.setGradientFill (fill);
+    g.fillRoundedRectangle (b, 3.5f);
+
+    g.setColour (juce::Colours::white.withAlpha (isOn ? 0.26f : 0.16f));
+    g.drawRoundedRectangle (b, 3.5f, 1.0f);
+
+    if (isOn)
+    {
+        auto led = b.removeFromTop (2.0f).reduced (4.0f, 0.0f);
+        g.setColour (onColour.brighter (0.35f).withAlpha (0.82f));
+        g.fillRoundedRectangle (led, 1.0f);
+    }
+
+    g.setColour (juce::Colours::white.withAlpha (isOn ? 0.98f : 0.78f));
+    g.setFont (juce::Font (juce::FontOptions (9.9f, juce::Font::bold)));
     g.drawText (text, bounds, juce::Justification::centred, false);
 }
 }
@@ -1229,6 +1558,68 @@ BeatMakerNoRecord::SectionContainer::SectionContainer (BeatMakerNoRecord& ownerT
     : owner (ownerToUse), section (sectionToUse)
 {
     setOpaque (false);
+}
+
+void BeatMakerNoRecord::SectionContainer::paint (juce::Graphics& g)
+{
+    auto frame = getLocalBounds().toFloat().reduced (1.0f);
+    if (frame.getWidth() <= 10.0f || frame.getHeight() <= 10.0f)
+        return;
+
+    juce::String title;
+    juce::Colour accent;
+
+    switch (section)
+    {
+        case FloatSection::workspace:
+            title = "Timeline / Track View";
+            accent = juce::Colour::fromRGB (101, 171, 232);
+            break;
+        case FloatSection::mixer:
+            title = "Mixer / Routing";
+            accent = juce::Colour::fromRGB (107, 188, 158);
+            break;
+        case FloatSection::piano:
+            title = "Piano Roll / Step Sequencer";
+            accent = juce::Colour::fromRGB (236, 176, 96);
+            break;
+    }
+
+    g.setColour (juce::Colours::black.withAlpha (0.30f));
+    g.fillRoundedRectangle (frame.translated (0.0f, 2.0f), 11.0f);
+
+    juce::ColourGradient fill (juce::Colour::fromRGB (20, 28, 39).withAlpha (0.88f),
+                               frame.getX(), frame.getY(),
+                               juce::Colour::fromRGB (13, 18, 27).withAlpha (0.84f),
+                               frame.getX(), frame.getBottom(), false);
+    g.setGradientFill (fill);
+    g.fillRoundedRectangle (frame, 11.0f);
+
+    g.setColour (juce::Colours::white.withAlpha (0.08f));
+    g.drawRoundedRectangle (frame, 11.0f, 1.0f);
+
+    auto accentStrip = frame.removeFromTop (2.0f).reduced (14.0f, 0.0f);
+    juce::ColourGradient accentFill (accent.withAlpha (0.74f), accentStrip.getX(), accentStrip.getY(),
+                                     accent.withAlpha (0.0f), accentStrip.getRight(), accentStrip.getY(), false);
+    g.setGradientFill (accentFill);
+    g.fillRoundedRectangle (accentStrip, 1.0f);
+
+    const float maxBadgeWidth = juce::jmax (36.0f, frame.getWidth() - 18.0f);
+    const float badgeWidth = juce::jmin (juce::jmax (116.0f, frame.getWidth() * 0.42f), maxBadgeWidth);
+    if (badgeWidth > 30.0f)
+    {
+        auto badge = juce::Rectangle<float> (frame.getX() + 12.0f,
+                                             frame.getY() + 8.0f,
+                                             badgeWidth,
+                                             19.0f);
+        g.setColour (juce::Colour::fromRGB (15, 22, 33).withAlpha (0.88f));
+        g.fillRoundedRectangle (badge, 5.5f);
+        g.setColour (accent.withAlpha (0.66f));
+        g.drawRoundedRectangle (badge, 5.5f, 1.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.88f));
+        g.setFont (juce::Font (juce::FontOptions (10.3f, juce::Font::bold)));
+        g.drawFittedText (title, badge.toNearestInt().reduced (8, 0), juce::Justification::centredLeft, 1);
+    }
 }
 
 void BeatMakerNoRecord::SectionContainer::resized()
@@ -1303,23 +1694,44 @@ void BeatMakerNoRecord::LayoutSplitter::paint (juce::Graphics& g)
     auto bounds = getLocalBounds().toFloat();
     g.fillAll (juce::Colours::transparentBlack);
 
+    const bool active = isMouseOverOrDragging();
     const float center = isVertical ? bounds.getWidth() * 0.5f : bounds.getHeight() * 0.5f;
-    g.setColour (juce::Colours::white.withAlpha (0.20f));
-    if (isVertical)
-        g.fillRect (juce::Rectangle<float> (center - 0.5f, 0.0f, 1.0f, bounds.getHeight()));
-    else
-        g.fillRect (juce::Rectangle<float> (0.0f, center - 0.5f, bounds.getWidth(), 1.0f));
+    auto groove = bounds.reduced (isVertical ? bounds.getWidth() * 0.34f : 3.0f,
+                                  isVertical ? 3.0f : bounds.getHeight() * 0.34f);
 
-    g.setColour (juce::Colour::fromRGB (101, 168, 233).withAlpha (isMouseOverOrDragging() ? 0.75f : 0.35f));
+    g.setColour (juce::Colour::fromRGB (13, 20, 31).withAlpha (active ? 0.84f : 0.66f));
+    g.fillRoundedRectangle (groove, 3.0f);
+    g.setColour (juce::Colours::white.withAlpha (active ? 0.22f : 0.12f));
+    g.drawRoundedRectangle (groove, 3.0f, 1.0f);
+
+    g.setColour (juce::Colours::white.withAlpha (active ? 0.38f : 0.20f));
     if (isVertical)
-    {
-        const float gripY = bounds.getCentreY();
-        g.fillRoundedRectangle ({ center - 2.2f, gripY - 18.0f, 4.4f, 36.0f }, 2.0f);
-    }
+        g.fillRect (juce::Rectangle<float> (center - 0.5f, groove.getY() + 2.0f, 1.0f, groove.getHeight() - 4.0f));
     else
+        g.fillRect (juce::Rectangle<float> (groove.getX() + 2.0f, center - 0.5f, groove.getWidth() - 4.0f, 1.0f));
+
+    juce::Rectangle<float> grip;
+    if (isVertical)
+        grip = { center - 3.8f, bounds.getCentreY() - 20.0f, 7.6f, 40.0f };
+    else
+        grip = { bounds.getCentreX() - 20.0f, center - 3.8f, 40.0f, 7.6f };
+
+    juce::ColourGradient gripFill (juce::Colour::fromRGB (108, 182, 236).withAlpha (active ? 0.88f : 0.62f),
+                                   grip.getX(), grip.getY(),
+                                   juce::Colour::fromRGB (66, 126, 187).withAlpha (active ? 0.82f : 0.56f),
+                                   grip.getX(), grip.getBottom(), false);
+    g.setGradientFill (gripFill);
+    g.fillRoundedRectangle (grip, 3.6f);
+    g.setColour (juce::Colours::white.withAlpha (0.34f));
+    g.drawRoundedRectangle (grip, 3.6f, 1.0f);
+
+    g.setColour (juce::Colours::white.withAlpha (active ? 0.80f : 0.55f));
+    for (int i = -1; i <= 1; ++i)
     {
-        const float gripX = bounds.getCentreX();
-        g.fillRoundedRectangle ({ gripX - 18.0f, center - 2.2f, 36.0f, 4.4f }, 2.0f);
+        if (isVertical)
+            g.fillEllipse (center - 1.4f, bounds.getCentreY() + (float) i * 7.0f - 1.4f, 2.8f, 2.8f);
+        else
+            g.fillEllipse (bounds.getCentreX() + (float) i * 7.0f - 1.4f, center - 1.4f, 2.8f, 2.8f);
     }
 }
 
@@ -1338,6 +1750,18 @@ void BeatMakerNoRecord::LayoutSplitter::mouseDrag (const juce::MouseEvent& e)
     dragStartScreen = current;
     if (onDeltaDrag != nullptr)
         onDeltaDrag (delta);
+}
+
+void BeatMakerNoRecord::LayoutSplitter::mouseEnter (const juce::MouseEvent& e)
+{
+    juce::ignoreUnused (e);
+    repaint();
+}
+
+void BeatMakerNoRecord::LayoutSplitter::mouseExit (const juce::MouseEvent& e)
+{
+    juce::ignoreUnused (e);
+    repaint();
 }
 
 BeatMakerNoRecord::TimelineRulerComponent::TimelineRulerComponent (BeatMakerNoRecord& ownerToUse)
@@ -1597,6 +2021,25 @@ void BeatMakerNoRecord::MixerAreaComponent::timerCallback()
                            << juce::String (volumeDb, 2)
                            << ":"
                            << juce::String (pan, 2);
+
+            const auto sendLookup = getMixerSendLookup (*track);
+            for (int sendSlot = 0; sendSlot < mixerSendSlotCount; ++sendSlot)
+            {
+                if (auto* send = sendLookup.slots[(size_t) sendSlot])
+                {
+                    stateSignature << ":S" << sendSlot
+                                   << "@"
+                                   << send->getBusNumber()
+                                   << ","
+                                   << juce::String (send->getGainDb(), 1)
+                                   << ","
+                                   << (send->isEnabled() ? "1" : "0");
+                }
+                else
+                {
+                    stateSignature << ":S" << sendSlot << "@off";
+                }
+            }
         }
     }
 
@@ -1613,6 +2056,86 @@ void BeatMakerNoRecord::MixerAreaComponent::timerCallback()
 
     if (shouldRepaint)
         repaint();
+}
+
+BeatMakerNoRecord::ChannelRackPreviewComponent::ChannelRackPreviewComponent (BeatMakerNoRecord& ownerToUse)
+    : owner (ownerToUse)
+{
+    setOpaque (true);
+    startTimerHz (6);
+}
+
+void BeatMakerNoRecord::ChannelRackPreviewComponent::paint (juce::Graphics& g)
+{
+    owner.paintChannelRackPreview (g, getLocalBounds());
+}
+
+void BeatMakerNoRecord::ChannelRackPreviewComponent::mouseDown (const juce::MouseEvent& e)
+{
+    owner.handleChannelRackPreviewMouseDown (e, getWidth(), getHeight());
+}
+
+void BeatMakerNoRecord::ChannelRackPreviewComponent::timerCallback()
+{
+    if (! owner.isShowing() || ! isShowing())
+        return;
+
+    juce::String stateSignature;
+    if (owner.edit == nullptr)
+    {
+        stateSignature = "no-edit";
+    }
+    else
+    {
+        auto tracks = te::getAudioTracks (*owner.edit);
+        stateSignature << "tracks=" << tracks.size();
+
+        if (auto* selectedTrack = owner.getSelectedTrackOrFirst())
+            stateSignature << "|selected=" << selectedTrack->itemID.toString();
+        else
+            stateSignature << "|selected=none";
+
+        for (auto* track : tracks)
+        {
+            if (track == nullptr)
+                continue;
+
+            int synthCount = 0;
+            int fxCount = 0;
+
+            for (auto* plugin : track->pluginList.getPlugins())
+            {
+                if (plugin == nullptr || isMixerUtilityPlugin (*plugin))
+                    continue;
+
+                if (dynamic_cast<te::AuxSendPlugin*> (plugin) != nullptr
+                    || dynamic_cast<te::AuxReturnPlugin*> (plugin) != nullptr)
+                    continue;
+
+                if (plugin->isSynth())
+                    ++synthCount;
+                else
+                    ++fxCount;
+            }
+
+            stateSignature << ";"
+                           << track->itemID.toString()
+                           << ":"
+                           << synthCount
+                           << ":"
+                           << fxCount
+                           << ":"
+                           << (track->isMuted (false) ? "1" : "0")
+                           << ":"
+                           << (track->isSolo (false) ? "1" : "0");
+        }
+    }
+
+    if (stateSignature != lastStateSignature)
+    {
+        lastStateSignature = stateSignature;
+        repaint();
+    }
 }
 
 void BeatMakerNoRecord::paint (juce::Graphics& g)
@@ -2042,7 +2565,9 @@ void BeatMakerNoRecord::resized()
         return contentHeight + groupInset * 2 + groupTitleInset;
     };
 
-    auto bounds = getLocalBounds().reduced (12);
+    const int chromeInset = densityMode == UiDensityMode::accessible ? 14
+                            : (denseLayout ? 10 : 12);
+    auto bounds = getLocalBounds().reduced (chromeInset);
     const int footerHeight = (denseLayout ? 30 : 34) + (densityMode == UiDensityMode::accessible ? 4 : (densityMode == UiDensityMode::compact ? -2 : 0));
     auto footer = bounds.removeFromBottom (juce::jmax (26, footerHeight)).reduced (2, 2);
     statusLabel.setBounds (footer.removeFromLeft ((footer.getWidth() * 57) / 100).reduced (0, 1));
@@ -2055,7 +2580,7 @@ void BeatMakerNoRecord::resized()
     const int commandToolbarHeight = densityMode == UiDensityMode::accessible ? 32 : (denseLayout ? 27 : 30);
     auto commandToolbarArea = bounds.removeFromTop (commandToolbarHeight);
     commandToolbar.setBounds (commandToolbarArea.reduced (1, 1));
-    bounds.removeFromTop (denseLayout ? 6 : 8);
+    bounds.removeFromTop (densityMode == UiDensityMode::accessible ? 10 : (denseLayout ? 6 : 8));
 
     const int sessionInnerWidth = juce::jmax (220, bounds.getWidth() - groupInset * 2);
     const int row1TransportWidth = juce::jmax (denseLayout ? 220 : 300, sessionInnerWidth / (denseLayout ? 2 : 3));
@@ -2112,8 +2637,8 @@ void BeatMakerNoRecord::resized()
     currentRightDockHeightForResize = 0;
     currentBottomDockHeightForResize = 0;
 
-    const int splitterThickness = 8;
-    const int splitGap = 10;
+    const int splitterThickness = densityMode == UiDensityMode::accessible ? 12 : (denseLayout ? 8 : 10);
+    const int splitGap = densityMode == UiDensityMode::accessible ? 14 : (denseLayout ? 8 : 10);
 
     leftDockSplitter.setBounds ({});
     workspaceMixerSplitter.setBounds ({});
@@ -2155,13 +2680,13 @@ void BeatMakerNoRecord::resized()
     const bool showEditingPanelSet = panelMode == LeftDockPanelMode::all || panelMode == LeftDockPanelMode::editing;
     const bool showSoundPanelSet = panelMode == LeftDockPanelMode::all || panelMode == LeftDockPanelMode::sound;
 
-    const bool showArrangementPanel = showProjectPanelSet;
-    const bool showTrackPanel = showProjectPanelSet;
-    const bool showClipTools = clipEditGroup.isVisible() && showEditingPanelSet;
-    const bool showMidiTools = midiEditGroup.isVisible() && showEditingPanelSet;
-    const bool showAudioTools = audioEditGroup.isVisible() && showEditingPanelSet;
-    const bool showFxPanel = showSoundPanelSet;
-    const bool showMixerPanel = showProjectPanelSet || showSoundPanelSet;
+    const bool showArrangementPanel = windowPanelArrangementVisible && showProjectPanelSet;
+    const bool showTrackPanel = windowPanelTrackVisible && showProjectPanelSet;
+    const bool showClipTools = windowPanelClipVisible && clipEditGroup.isVisible() && showEditingPanelSet;
+    const bool showMidiTools = windowPanelMidiVisible && midiEditGroup.isVisible() && showEditingPanelSet;
+    const bool showAudioTools = windowPanelAudioVisible && audioEditGroup.isVisible() && showEditingPanelSet;
+    const bool showFxPanel = windowPanelFxVisible && showSoundPanelSet;
+    const bool showMixerPanel = windowPanelTrackMixerVisible && (showProjectPanelSet || showSoundPanelSet);
     const int panelSelectorHeight = defaultRowHeight + 8;
     const int dualColumnGap = denseLayout ? 6 : 8;
     const int leftDockScrollTrackWidth = denseLayout ? 14 : 16;
@@ -2716,9 +3241,7 @@ void BeatMakerNoRecord::resized()
     fxScanSkippedButton.setBounds (fxActions.removeFromLeft (actionWidth).reduced (0, 1));
     fxActions.removeFromLeft (actionGap);
     fxPrepPlaybackButton.setBounds (fxActions.reduced (0, 1));
-    layoutButtonRow (nextRow (fxArea, getAdaptiveButtonRowHeight (fxArea.getWidth(), 8, 2)), { &fxAddSamplerButton, &fxAddSynthButton, &fxAddEQButton,
-                                         &fxAddCompButton, &fxAddReverbButton, &fxAddDelayButton,
-                                         &fxAddExternalInstrumentButton, &fxAddExternalButton });
+    layoutButtonRow (nextRow (fxArea, getAdaptiveButtonRowHeight (fxArea.getWidth(), 2, 2)), { &fxAddExternalInstrumentButton, &fxAddExternalButton });
     layoutButtonRow (nextRow (fxArea, getAdaptiveButtonRowHeight (fxArea.getWidth(), 5, 2)), { &fxOpenEditorButton, &fxMoveUpButton, &fxMoveDownButton, &fxBypassButton, &fxDeleteButton });
 
     auto mixerControlsArea = getGroupContent (mixerGroup, mixerControlsBounds);
@@ -2742,9 +3265,9 @@ void BeatMakerNoRecord::resized()
     mixerRow2.removeFromLeft (6);
     trackPanSlider.setBounds (mixerRow2.reduced (0, 1));
 
-    const bool dockWorkspace = ! isSectionFloating (FloatSection::workspace);
-    const bool dockMixer = ! isSectionFloating (FloatSection::mixer);
-    const bool dockPiano = ! isSectionFloating (FloatSection::piano);
+    const bool dockWorkspace = windowPanelWorkspaceVisible && ! isSectionFloating (FloatSection::workspace);
+    const bool dockMixer = windowPanelMixerVisible && ! isSectionFloating (FloatSection::mixer);
+    const bool dockPiano = windowPanelPianoVisible && ! isSectionFloating (FloatSection::piano);
 
     juce::Rectangle<int> workspaceBounds;
     juce::Rectangle<int> mixerBounds;
@@ -2753,7 +3276,7 @@ void BeatMakerNoRecord::resized()
     auto rightDockArea = rightDock;
     const bool needsBottomPane = dockMixer || dockPiano;
     const bool separateMixerPane = dockWorkspace && dockMixer
-                                   && rightDockArea.getWidth() >= roundToInt (1180.0f * uiScale);
+                                   && rightDockArea.getWidth() >= roundToInt (1080.0f * uiScale);
 
     if (separateMixerPane)
     {
@@ -2767,14 +3290,14 @@ void BeatMakerNoRecord::resized()
         workspaceMixerWidthRatio = (float) workspaceWidth / (float) juce::jmax (1, currentRightDockWidthForResize);
 
         auto workspaceColumn = rightDockArea.removeFromLeft (workspaceWidth);
-        if (rightDockArea.getWidth() > 8)
-            rightDockArea.removeFromLeft (8);
+        if (rightDockArea.getWidth() > splitterThickness)
+            rightDockArea.removeFromLeft (splitterThickness);
         mixerBounds = rightDockArea;
 
         if (! workspaceColumn.isEmpty() && ! mixerBounds.isEmpty())
             workspaceMixerSplitter.setBounds (workspaceColumn.getRight(),
                                               workspaceColumn.getY(),
-                                              8,
+                                              splitterThickness,
                                               workspaceColumn.getHeight());
 
         if (dockPiano)
@@ -2789,8 +3312,8 @@ void BeatMakerNoRecord::resized()
             workspaceBottomHeightRatio = (float) bottomPanelHeight / (float) juce::jmax (1, workspaceColumn.getHeight());
 
             auto bottomWorkspace = workspaceColumn.removeFromBottom (bottomPanelHeight);
-            if (workspaceColumn.getHeight() > 8)
-                workspaceColumn.removeFromBottom (8);
+            if (workspaceColumn.getHeight() > splitterThickness)
+                workspaceColumn.removeFromBottom (splitterThickness);
             workspaceBounds = workspaceColumn;
             pianoBounds = bottomWorkspace;
 
@@ -2798,7 +3321,7 @@ void BeatMakerNoRecord::resized()
                 workspaceBottomSplitter.setBounds (workspaceBounds.getX(),
                                                    workspaceBounds.getBottom(),
                                                    workspaceBounds.getWidth(),
-                                                   8);
+                                                   splitterThickness);
         }
         else
         {
@@ -2816,19 +3339,20 @@ void BeatMakerNoRecord::resized()
                                                     roundToInt ((float) rightDockArea.getHeight() * workspaceBottomHeightRatio));
         workspaceBottomHeightRatio = (float) bottomPanelHeight / (float) juce::jmax (1, rightDockArea.getHeight());
         auto bottomRight = rightDockArea.removeFromBottom (bottomPanelHeight);
-        rightDockArea.removeFromBottom (8);
+        if (rightDockArea.getHeight() > splitterThickness)
+            rightDockArea.removeFromBottom (splitterThickness);
         workspaceBounds = rightDockArea;
 
         if (! workspaceBounds.isEmpty())
             workspaceBottomSplitter.setBounds (workspaceBounds.getX(),
                                                workspaceBounds.getBottom(),
                                                workspaceBounds.getWidth(),
-                                               8);
+                                               splitterThickness);
 
         if (dockMixer && dockPiano)
         {
             currentBottomDockHeightForResize = bottomRight.getHeight();
-            const int splitterHeight = 8;
+            const int splitterHeight = splitterThickness;
             const int availableHeight = juce::jmax (0, bottomRight.getHeight() - splitterHeight);
             const int minPianoPriorityHeight = denseLayout ? 170 : 210;
             const int minMixerHeight = juce::jmax (70, juce::jmin (120, availableHeight / 3));
@@ -2887,7 +3411,7 @@ void BeatMakerNoRecord::resized()
         if (dockMixer && dockPiano)
         {
             currentBottomDockHeightForResize = rightDockArea.getHeight();
-            const int splitterHeight = 8;
+            const int splitterHeight = splitterThickness;
             const int availableHeight = juce::jmax (0, rightDockArea.getHeight() - splitterHeight);
             const int minPianoPriorityHeight = denseLayout ? 170 : 210;
             const int minMixerHeight = juce::jmax (70, juce::jmin (120, availableHeight / 3));
@@ -2955,18 +3479,29 @@ void BeatMakerNoRecord::resized()
     ensureDockAttachment (mixerSection, dockMixer);
     ensureDockAttachment (pianoSection, dockPiano);
 
+    const int dockSectionInset = densityMode == UiDensityMode::accessible ? 6 : (denseLayout ? 3 : 4);
+    auto insetDockSection = [dockSectionInset] (juce::Rectangle<int> area)
+    {
+        if (area.isEmpty())
+            return area;
+
+        const int insetX = juce::jmin (dockSectionInset, juce::jmax (0, area.getWidth() / 10));
+        const int insetY = juce::jmin (dockSectionInset, juce::jmax (0, area.getHeight() / 10));
+        return area.reduced (insetX, insetY);
+    };
+
     if (dockWorkspace)
-        workspaceSection.setBounds (workspaceBounds);
+        workspaceSection.setBounds (insetDockSection (workspaceBounds));
     else if (workspaceSection.getParentComponent() == this)
         workspaceSection.setBounds ({});
 
     if (dockMixer)
-        mixerSection.setBounds (mixerBounds);
+        mixerSection.setBounds (insetDockSection (mixerBounds));
     else if (mixerSection.getParentComponent() == this)
         mixerSection.setBounds ({});
 
     if (dockPiano)
-        pianoSection.setBounds (pianoBounds);
+        pianoSection.setBounds (insetDockSection (pianoBounds));
     else if (pianoSection.getParentComponent() == this)
         pianoSection.setBounds ({});
 
@@ -3013,6 +3548,10 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
         groupInset += 1;
         groupTitleInset += 2;
     }
+
+    const int sectionInset = densityMode == UiDensityMode::accessible ? 5 : (denseLayout ? 2 : 4);
+    bounds = bounds.reduced (juce::jmin (sectionInset, juce::jmax (0, bounds.getWidth() / 9)),
+                             juce::jmin (sectionInset, juce::jmax (0, bounds.getHeight() / 9)));
 
     auto getGroupContent = [groupInset, groupTitleInset] (juce::GroupComponent& group, juce::Rectangle<int> area)
     {
@@ -3092,14 +3631,71 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
         case FloatSection::mixer:
         {
             auto mixerRegion = bounds;
-            const int minRackSectionHeight = juce::jmax (120, mixerRegion.getHeight() / 3);
-            const int maxRackSectionHeight = juce::jmax (minRackSectionHeight, mixerRegion.getHeight() - 120);
-            const int rackSectionHeight = juce::jlimit (minRackSectionHeight, maxRackSectionHeight, roundToInt (mixerRegion.getHeight() * 0.72f));
-            auto rackRegion = mixerRegion.removeFromBottom (rackSectionHeight);
-            if (mixerRegion.getHeight() > 8)
-                mixerRegion.removeFromBottom (8);
+            const int splitterThickness = denseLayout ? 8 : 10;
+            const bool showMixerAreaPanel = windowPanelMixerAreaVisible;
+            const bool showChannelRackPanel = windowPanelChannelRackVisible;
+            const bool showInspectorPanel = windowPanelInspectorVisible;
+            const bool showRackAreaPanel = showChannelRackPanel || showInspectorPanel;
+            mixerRackSplitter.setBounds ({});
+            rackInspectorSplitter.setBounds ({});
+            channelRackControlsSplitter.setBounds ({});
+            currentMixerSectionHeightForResize = 0;
+            currentRackSectionWidthForResize = 0;
+            currentChannelRackSectionHeightForResize = 0;
 
-            auto mixerContent = getGroupContent (mixerAreaGroup, mixerRegion);
+            juce::Rectangle<int> mixerTopRegion;
+            juce::Rectangle<int> rackRegion;
+            const int minMixerHeight = denseLayout ? 132 : 168;
+            const int minRackHeight = denseLayout ? 154 : 194;
+            const int availableHeight = juce::jmax (0, mixerRegion.getHeight() - splitterThickness);
+
+            if (showMixerAreaPanel && showRackAreaPanel && availableHeight >= minMixerHeight + minRackHeight)
+            {
+                currentMixerSectionHeightForResize = availableHeight;
+                const int maxMixerHeight = juce::jmax (minMixerHeight, availableHeight - minRackHeight);
+                const int mixerHeight = juce::jlimit (minMixerHeight,
+                                                      maxMixerHeight,
+                                                      roundToInt ((float) availableHeight * mixerRackHeightRatio));
+                mixerRackHeightRatio = (float) mixerHeight / (float) juce::jmax (1, availableHeight);
+
+                mixerTopRegion = mixerRegion.removeFromTop (mixerHeight);
+                if (mixerRegion.getHeight() > splitterThickness)
+                    mixerRegion.removeFromTop (splitterThickness);
+                rackRegion = mixerRegion;
+
+                if (! mixerTopRegion.isEmpty() && ! rackRegion.isEmpty())
+                {
+                    mixerRackSplitter.setBounds (mixerTopRegion.getX(),
+                                                 mixerTopRegion.getBottom(),
+                                                 mixerTopRegion.getWidth(),
+                                                 splitterThickness);
+                }
+            }
+            else
+            {
+                if (showMixerAreaPanel && ! showRackAreaPanel)
+                {
+                    mixerTopRegion = mixerRegion;
+                    rackRegion = {};
+                }
+                else if (! showMixerAreaPanel && showRackAreaPanel)
+                {
+                    mixerTopRegion = {};
+                    rackRegion = mixerRegion;
+                }
+                else if (showMixerAreaPanel && showRackAreaPanel)
+                {
+                    mixerTopRegion = mixerRegion;
+                    rackRegion = {};
+                }
+                else
+                {
+                    mixerTopRegion = {};
+                    rackRegion = {};
+                }
+            }
+
+            auto mixerContent = getGroupContent (mixerAreaGroup, mixerTopRegion);
             const int minMixerToolbarHeight = denseLayout ? 24 : 26;
             const int maxMixerToolbarHeight = denseLayout ? 40 : 44;
             const int mixerToolbarHeight = juce::jlimit (minMixerToolbarHeight,
@@ -3109,50 +3705,120 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
             mixerToolsToolbar.setBounds (mixerToolbarRow.reduced (0, 1));
             mixerArea.setBounds (mixerContent);
 
-            const int minSynthHeight = juce::jmax (132, rackRegion.getHeight() / 3);
-            const int maxSynthHeight = juce::jmax (minSynthHeight, rackRegion.getHeight() - 96);
-            const int synthHeight = juce::jlimit (minSynthHeight, maxSynthHeight, roundToInt (rackRegion.getHeight() * 0.64f));
-            auto synthRegion = rackRegion.removeFromBottom (synthHeight);
-            if (rackRegion.getHeight() > 8)
-                rackRegion.removeFromBottom (8);
+            if (! showMixerAreaPanel)
+            {
+                mixerAreaGroup.setBounds ({});
+                mixerToolsToolbar.setBounds ({});
+                mixerArea.setBounds ({});
+            }
 
             juce::Rectangle<int> rackLeft;
             juce::Rectangle<int> rackRight;
-            if (rackRegion.getWidth() < 520)
+            const int availableRackWidth = juce::jmax (0, rackRegion.getWidth() - splitterThickness);
+            const int minRackLeftWidth = juce::jmax (140, availableRackWidth / 4);
+            const int minRackRightWidth = juce::jmax (140, availableRackWidth / 4);
+            if (showChannelRackPanel
+                && showInspectorPanel
+                && ! rackRegion.isEmpty()
+                && availableRackWidth >= minRackLeftWidth + minRackRightWidth)
             {
-                const int minTopHeight = juce::jmax (92, rackRegion.getHeight() / 3);
-                const int maxTopHeight = juce::jmax (minTopHeight, rackRegion.getHeight() - 92);
-                rackLeft = rackRegion.removeFromTop (juce::jlimit (minTopHeight, maxTopHeight, rackRegion.getHeight() / 2));
-                if (rackRegion.getHeight() > 8)
-                    rackRegion.removeFromTop (8);
+                currentRackSectionWidthForResize = availableRackWidth;
+                const int maxRackLeftWidth = juce::jmax (minRackLeftWidth, availableRackWidth - minRackRightWidth);
+                const int rackLeftWidth = juce::jlimit (minRackLeftWidth,
+                                                        maxRackLeftWidth,
+                                                        roundToInt ((float) availableRackWidth * rackInspectorWidthRatio));
+                rackInspectorWidthRatio = (float) rackLeftWidth / (float) juce::jmax (1, availableRackWidth);
+
+                rackLeft = rackRegion.removeFromLeft (rackLeftWidth);
+                if (rackRegion.getWidth() > splitterThickness)
+                    rackRegion.removeFromLeft (splitterThickness);
                 rackRight = rackRegion;
+
+                if (! rackLeft.isEmpty() && ! rackRight.isEmpty())
+                {
+                    rackInspectorSplitter.setBounds (rackLeft.getRight(),
+                                                    rackLeft.getY(),
+                                                    splitterThickness,
+                                                    rackLeft.getHeight());
+                }
             }
             else
             {
-                const int minRackLeftWidth = juce::jmax (170, rackRegion.getWidth() / 4);
-                const int maxRackLeftWidth = juce::jmax (minRackLeftWidth, rackRegion.getWidth() - 170);
-                rackLeft = rackRegion.removeFromLeft (juce::jlimit (minRackLeftWidth, maxRackLeftWidth, rackRegion.getWidth() / 2));
-                if (rackRegion.getWidth() > 8)
-                    rackRegion.removeFromLeft (8);
-                rackRight = rackRegion;
+                if (showChannelRackPanel && showInspectorPanel)
+                {
+                    const int minTopHeight = juce::jmax (120, rackRegion.getHeight() / 3);
+                    const int maxTopHeight = juce::jmax (minTopHeight, rackRegion.getHeight() - 120);
+                    rackLeft = rackRegion.removeFromTop (juce::jlimit (minTopHeight, maxTopHeight, rackRegion.getHeight() / 2));
+                    if (rackRegion.getHeight() > splitterThickness)
+                        rackRegion.removeFromTop (splitterThickness);
+                    rackRight = rackRegion;
+                }
+                else
+                {
+                    rackLeft = showChannelRackPanel ? rackRegion : juce::Rectangle<int>();
+                    rackRight = showInspectorPanel ? rackRegion : juce::Rectangle<int>();
+                }
             }
 
-            auto channelRackArea = getGroupContent (channelRackGroup, rackLeft);
-            auto inspectorArea = getGroupContent (inspectorGroup, rackRight);
-            auto synthArea = getGroupContent (builtInSynthGroup, synthRegion);
+            auto channelRackArea = showChannelRackPanel ? getGroupContent (channelRackGroup, rackLeft)
+                                                        : juce::Rectangle<int>();
+            auto inspectorArea = showInspectorPanel ? getGroupContent (inspectorGroup, rackRight)
+                                                    : juce::Rectangle<int>();
 
-            auto row1 = nextRow (channelRackArea, defaultRowHeight);
+            if (! showChannelRackPanel)
+                channelRackGroup.setBounds ({});
+            if (! showInspectorPanel)
+                inspectorGroup.setBounds ({});
+
+            builtInSynthGroup.setBounds ({});
+            auto channelRackControlArea = channelRackArea;
+            const int minRackControlsHeight = denseLayout ? 88 : 102;
+            const int minRackPreviewHeight = denseLayout ? 96 : 120;
+            const int availableChannelRackHeight = juce::jmax (0, channelRackArea.getHeight() - splitterThickness);
+            if (availableChannelRackHeight >= minRackControlsHeight + minRackPreviewHeight)
+            {
+                currentChannelRackSectionHeightForResize = availableChannelRackHeight;
+                const int maxRackControlsHeight = juce::jmax (minRackControlsHeight,
+                                                              availableChannelRackHeight - minRackPreviewHeight);
+                const int controlsHeight = juce::jlimit (minRackControlsHeight,
+                                                         maxRackControlsHeight,
+                                                         roundToInt ((float) availableChannelRackHeight * channelRackControlsHeightRatio));
+                channelRackControlsHeightRatio = (float) controlsHeight / (float) juce::jmax (1, availableChannelRackHeight);
+                channelRackControlArea = channelRackArea.removeFromTop (controlsHeight);
+                if (channelRackArea.getHeight() > splitterThickness)
+                    channelRackArea.removeFromTop (splitterThickness);
+                channelRackPreview.setBounds (channelRackArea);
+
+                if (! channelRackControlArea.isEmpty() && ! channelRackArea.isEmpty())
+                {
+                    channelRackControlsSplitter.setBounds (channelRackControlArea.getX(),
+                                                           channelRackControlArea.getBottom(),
+                                                           channelRackControlArea.getWidth(),
+                                                           splitterThickness);
+                }
+            }
+            else
+            {
+                const int fallbackControlsHeight = juce::jmin (channelRackArea.getHeight(),
+                                                               juce::jmax (72, (channelRackArea.getHeight() * 2) / 3));
+                channelRackControlArea = channelRackArea.removeFromTop (fallbackControlsHeight);
+                channelRackPreview.setBounds (channelRackArea.getHeight() >= 56 ? channelRackArea
+                                                                                : juce::Rectangle<int>());
+            }
+
+            auto row1 = nextRow (channelRackControlArea, defaultRowHeight);
             channelRackTrackLabel.setBounds (row1.removeFromLeft (42).reduced (0, 1));
             row1.removeFromLeft (6);
             channelRackTrackBox.setBounds (row1.reduced (0, 1));
 
-            auto row2 = nextRow (channelRackArea, defaultRowHeight);
+            auto row2 = nextRow (channelRackControlArea, defaultRowHeight);
             channelRackPluginLabel.setBounds (row2.removeFromLeft (42).reduced (0, 1));
             row2.removeFromLeft (6);
             channelRackPluginBox.setBounds (row2.reduced (0, 1));
 
             const int compactRackButtonsHeight = defaultRowHeight * 2 + 3;
-            auto row3 = nextRow (channelRackArea, channelRackArea.getWidth() < 330 ? compactRackButtonsHeight : (defaultRowHeight + 2));
+            auto row3 = nextRow (channelRackControlArea,
+                                 channelRackControlArea.getWidth() < 330 ? compactRackButtonsHeight : (defaultRowHeight + 2));
             const int rackButtonGap = 6;
             if (row3.getHeight() >= compactRackButtonsHeight - 1)
             {
@@ -3182,112 +3848,9 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
             inspectorRouteLabel.setBounds (nextRow (inspectorArea, 24).reduced (2, 0));
             inspectorPluginLabel.setBounds (nextRow (inspectorArea, 24).reduced (2, 0));
             inspectorMeterLabel.setBounds (nextRow (inspectorArea, 24).reduced (2, 0));
-
-            builtInSynthTargetLabel.setBounds (nextRow (synthArea, 22).reduced (2, 0));
-
-            const bool compactPresetRow = synthArea.getWidth() < 420;
-            auto presetRow = nextRow (synthArea, compactPresetRow ? (defaultRowHeight * 2 + 3) : 24);
-            const int presetGap = 6;
-            if (compactPresetRow && presetRow.getHeight() >= (defaultRowHeight * 2))
-            {
-                auto topPresets = presetRow.removeFromTop ((presetRow.getHeight() - 3) / 2);
-                if (presetRow.getHeight() > 3)
-                    presetRow.removeFromTop (3);
-                auto bottomPresets = presetRow;
-
-                const int topWidth = juce::jmax (0, (topPresets.getWidth() - presetGap) / 2);
-                builtInSynthPresetInitButton.setBounds (topPresets.removeFromLeft (topWidth).reduced (0, 1));
-                if (topPresets.getWidth() > presetGap)
-                    topPresets.removeFromLeft (presetGap);
-                builtInSynthPresetWarmPadButton.setBounds (topPresets.reduced (0, 1));
-
-                const int bottomWidth = juce::jmax (0, (bottomPresets.getWidth() - presetGap) / 2);
-                builtInSynthPresetPunchBassButton.setBounds (bottomPresets.removeFromLeft (bottomWidth).reduced (0, 1));
-                if (bottomPresets.getWidth() > presetGap)
-                    bottomPresets.removeFromLeft (presetGap);
-                builtInSynthPresetBrightPluckButton.setBounds (bottomPresets.reduced (0, 1));
-            }
-            else
-            {
-                const int presetWidth = juce::jmax (0, (presetRow.getWidth() - presetGap * 3) / 4);
-                builtInSynthPresetInitButton.setBounds (presetRow.removeFromLeft (presetWidth).reduced (0, 1));
-                presetRow.removeFromLeft (presetGap);
-                builtInSynthPresetWarmPadButton.setBounds (presetRow.removeFromLeft (presetWidth).reduced (0, 1));
-                presetRow.removeFromLeft (presetGap);
-                builtInSynthPresetPunchBassButton.setBounds (presetRow.removeFromLeft (presetWidth).reduced (0, 1));
-                presetRow.removeFromLeft (presetGap);
-                builtInSynthPresetBrightPluckButton.setBounds (presetRow.reduced (0, 1));
-            }
-
-            auto layoutMacroPair = [&nextRow, defaultRowHeight] (juce::Rectangle<int>& area,
-                                                                 juce::Label& leftLabel, juce::Slider& leftSlider,
-                                                                 juce::Label& rightLabel, juce::Slider& rightSlider)
-            {
-                const bool compact = area.getWidth() < 360;
-                auto row = nextRow (area, compact ? (defaultRowHeight * 2 + 3) : defaultRowHeight);
-
-                if (compact && row.getHeight() >= (defaultRowHeight * 2))
-                {
-                    auto top = row.removeFromTop ((row.getHeight() - 3) / 2);
-                    if (row.getHeight() > 3)
-                        row.removeFromTop (3);
-                    auto bottom = row;
-
-                    const int topLabelWidth = juce::jlimit (42, 70, top.getWidth() / 3);
-                    leftLabel.setBounds (top.removeFromLeft (topLabelWidth).reduced (0, 1));
-                    if (top.getWidth() > 4)
-                        top.removeFromLeft (4);
-                    leftSlider.setBounds (top.reduced (0, 1));
-
-                    const int bottomLabelWidth = juce::jlimit (42, 70, bottom.getWidth() / 3);
-                    rightLabel.setBounds (bottom.removeFromLeft (bottomLabelWidth).reduced (0, 1));
-                    if (bottom.getWidth() > 4)
-                        bottom.removeFromLeft (4);
-                    rightSlider.setBounds (bottom.reduced (0, 1));
-                }
-                else
-                {
-                    auto left = row.removeFromLeft (row.getWidth() / 2);
-                    if (row.getWidth() > 8)
-                        row.removeFromLeft (8);
-                    auto right = row;
-
-                    const int leftLabelWidth = juce::jlimit (36, 64, left.getWidth() / 3);
-                    leftLabel.setBounds (left.removeFromLeft (leftLabelWidth).reduced (0, 1));
-                    left.removeFromLeft (4);
-                    leftSlider.setBounds (left.reduced (0, 1));
-
-                    const int rightLabelWidth = juce::jlimit (36, 64, right.getWidth() / 3);
-                    rightLabel.setBounds (right.removeFromLeft (rightLabelWidth).reduced (0, 1));
-                    right.removeFromLeft (4);
-                    rightSlider.setBounds (right.reduced (0, 1));
-                }
-            };
-
-            layoutMacroPair (synthArea,
-                             builtInSynthCutoffLabel, builtInSynthCutoffSlider,
-                             builtInSynthResonanceLabel, builtInSynthResonanceSlider);
-            layoutMacroPair (synthArea,
-                             builtInSynthEnvLabel, builtInSynthEnvSlider,
-                             builtInSynthDriveLabel, builtInSynthDriveSlider);
-            layoutMacroPair (synthArea,
-                             builtInSynthAttackLabel, builtInSynthAttackSlider,
-                             builtInSynthReleaseLabel, builtInSynthReleaseSlider);
-            layoutMacroPair (synthArea,
-                             builtInSynthReverbLabel, builtInSynthReverbSlider,
-                             builtInSynthDelayLabel, builtInSynthDelaySlider);
-            layoutMacroPair (synthArea,
-                             builtInSynthOsc1Label, builtInSynthOsc1Slider,
-                             builtInSynthOsc2Label, builtInSynthOsc2Slider);
-            layoutMacroPair (synthArea,
-                             builtInSynthOsc3Label, builtInSynthOsc3Slider,
-                             builtInSynthOsc4Label, builtInSynthOsc4Slider);
-            layoutMacroPair (synthArea,
-                             builtInSynthUnisonLabel, builtInSynthUnisonSlider,
-                             builtInSynthWidthLabel, builtInSynthWidthSlider);
-            layoutMacroPair (synthArea,
-                             builtInSynthChorusLabel, builtInSynthChorusSlider,
-                             builtInSynthMasterLabel, builtInSynthMasterSlider);
+            mixerRackSplitter.toFront (false);
+            rackInspectorSplitter.toFront (false);
+            channelRackControlsSplitter.toFront (false);
             break;
         }
 
@@ -3352,7 +3915,9 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
             }
 
             const auto effectiveViewMode = getPianoEditorLayoutModeSelection();
-            const int splitGap = denseLayout ? 8 : 10;
+            const bool allowPianoRollPanel = windowPanelPianoRollVisible;
+            const bool allowStepSequencerPanel = windowPanelStepSequencerVisible;
+            const int splitGap = densityMode == UiDensityMode::accessible ? 12 : (denseLayout ? 8 : 10);
             const int availableSplitHeight = juce::jmax (0, topSection.getHeight() - splitGap);
             auto layoutPianoRollEditor = [this, denseLayout] (juce::Rectangle<int> area)
             {
@@ -3425,7 +3990,24 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
                 stepSequencer.setBounds (editorArea);
             };
 
-            if (effectiveViewMode == PianoEditorLayoutMode::pianoRoll)
+            if (! allowPianoRollPanel && ! allowStepSequencerPanel)
+            {
+                pianoStepSplitter.setBounds ({});
+                pianoRollGroup.setBounds ({});
+                stepSequencerGroup.setBounds ({});
+                pianoRollToolbar.setBounds ({});
+                midiPianoRoll.setBounds ({});
+                pianoRollHorizontalScrollBar.setBounds ({});
+                pianoRollVerticalScrollBar.setBounds ({});
+                stepSequencerToolbar.setBounds ({});
+                stepSequencer.setBounds ({});
+                stepSequencerHorizontalScrollBar.setBounds ({});
+                updatePianoRollScrollbarsFromViewport();
+                updateStepSequencerScrollbarFromPageContext();
+                break;
+            }
+
+            if (effectiveViewMode == PianoEditorLayoutMode::pianoRoll || ! allowStepSequencerPanel)
             {
                 pianoStepSplitter.setBounds ({});
                 stepSequencerGroup.setBounds ({});
@@ -3439,7 +4021,7 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
                 break;
             }
 
-            if (effectiveViewMode == PianoEditorLayoutMode::stepSequencer)
+            if (effectiveViewMode == PianoEditorLayoutMode::stepSequencer || ! allowPianoRollPanel)
             {
                 pianoStepSplitter.setBounds ({});
                 pianoRollGroup.setBounds ({});
@@ -4070,31 +4652,6 @@ void BeatMakerNoRecord::setupMixerToolsToolbar()
                     [this] { prepareEditForPluginPlayback (true); },
                     hasEdit,
                     {});
-
-    addToolbarItem (mixerToolbarFxAddSampler, "Samp", "Add Sampler plugin", false, 54,
-                    [this] { addBuiltInPluginToSelectedTrack ("sampler", "Sampler"); },
-                    hasTrack,
-                    {});
-    addToolbarItem (mixerToolbarFxAddSynth, "4OSC", "Add 4OSC synth", false, 54,
-                    [this] { addBuiltInPluginToSelectedTrack ("4osc", "4OSC"); },
-                    hasTrack,
-                    {});
-    addToolbarItem (mixerToolbarFxAddEq, "EQ", "Add EQ plugin", false, 44,
-                    [this] { addBuiltInPluginToSelectedTrack ("4bandEq", "EQ"); },
-                    hasTrack,
-                    {});
-    addToolbarItem (mixerToolbarFxAddComp, "Comp", "Add compressor plugin", false, 52,
-                    [this] { addBuiltInPluginToSelectedTrack ("compressor", "Compressor"); },
-                    hasTrack,
-                    {});
-    addToolbarItem (mixerToolbarFxAddReverb, "Rev", "Add reverb plugin", false, 46,
-                    [this] { addBuiltInPluginToSelectedTrack ("reverb", "Reverb"); },
-                    hasTrack,
-                    {});
-    addToolbarItem (mixerToolbarFxAddDelay, "Dly", "Add delay plugin", false, 46,
-                    [this] { addBuiltInPluginToSelectedTrack ("delay", "Delay"); },
-                    hasTrack,
-                    {});
     addToolbarItem (mixerToolbarFxAddInstrument, "Inst+", "Add external instrument", false, 58,
                     [this] { addExternalInstrumentPluginToSelectedTrack(); },
                     hasTrack,
@@ -4126,8 +4683,7 @@ void BeatMakerNoRecord::setupMixerToolsToolbar()
         juce::ToolbarItemFactory::separatorBarId,
         mixerToolbarFxRefresh, mixerToolbarFxOpen, mixerToolbarFxScan, mixerToolbarFxPrep,
         juce::ToolbarItemFactory::separatorBarId,
-        mixerToolbarFxAddSampler, mixerToolbarFxAddSynth, mixerToolbarFxAddEq, mixerToolbarFxAddComp,
-        mixerToolbarFxAddReverb, mixerToolbarFxAddDelay, mixerToolbarFxAddInstrument, mixerToolbarFxAddExternal,
+        mixerToolbarFxAddInstrument, mixerToolbarFxAddExternal,
         juce::ToolbarItemFactory::separatorBarId, juce::ToolbarItemFactory::flexibleSpacerId,
         mixerToolbarFxMoveUp, mixerToolbarFxMoveDown, mixerToolbarFxBypass, mixerToolbarFxDelete
     });
@@ -5341,13 +5897,19 @@ bool BeatMakerNoRecord::perform (const InvocationInfo& info)
         case appCommandVelocityUp:        return triggerIfEnabled (midiVelocityUpButton);
         case appCommandBounceMidiToAudio: return triggerIfEnabled (midiBounceToAudioButton);
         case appCommandToggleFloatWorkspace:
+            windowPanelWorkspaceVisible = true;
             toggleSectionFloating (FloatSection::workspace);
+            engine.getPropertyStorage().getPropertiesFile().setValue ("windowPanelWorkspaceVisible", windowPanelWorkspaceVisible);
             return true;
         case appCommandToggleFloatMixer:
+            windowPanelMixerVisible = true;
             toggleSectionFloating (FloatSection::mixer);
+            engine.getPropertyStorage().getPropertiesFile().setValue ("windowPanelMixerVisible", windowPanelMixerVisible);
             return true;
         case appCommandToggleFloatPiano:
+            windowPanelPianoVisible = true;
             toggleSectionFloating (FloatSection::piano);
+            engine.getPropertyStorage().getPropertiesFile().setValue ("windowPanelPianoVisible", windowPanelPianoVisible);
             refreshPianoFloatingWindowUi();
             return true;
         case appCommandDockAllPanels:
@@ -5393,7 +5955,7 @@ bool BeatMakerNoRecord::perform (const InvocationInfo& info)
 
 juce::StringArray BeatMakerNoRecord::getMenuBarNames()
 {
-    return { "File", "Edit", "Transport", "Track", "Plugins", "View", "Help" };
+    return { "File", "Edit", "Transport", "Track", "Plugins", "View", "Window", "Help" };
 }
 
 juce::PopupMenu BeatMakerNoRecord::getMenuForIndex (int topLevelMenuIndex, const juce::String&)
@@ -5495,22 +6057,8 @@ juce::PopupMenu BeatMakerNoRecord::getMenuForIndex (int topLevelMenuIndex, const
             addButtonItem (menuPluginsPrepPlayback, "Prepare MIDI/FX Playback", fxPrepPlaybackButton);
             addButtonItem (menuPluginsOpenUi, "Open Selected Plugin UI", fxOpenEditorButton);
             m.addSeparator();
-            m.addItem (menuPluginsAddBundledNova, "Add Bundled Sampledex Nova Synth",
-                       fxAddExternalInstrumentButton.isEnabled(), false);
             addButtonItem (menuPluginsAddInstrument, "Add AU/VST3 Instrument", fxAddExternalInstrumentButton);
             addButtonItem (menuPluginsAddFx, "Add AU/VST3 Effect", fxAddExternalButton);
-            m.addSeparator();
-            addButtonItem (menuPluginsAddSampler, "Add Sampler", fxAddSamplerButton);
-            addButtonItem (menuPluginsAdd4Osc, "Add 4OSC", fxAddSynthButton);
-            addButtonItem (menuPluginsAddEq, "Add EQ", fxAddEQButton);
-            addButtonItem (menuPluginsAddComp, "Add Compressor", fxAddCompButton);
-            addButtonItem (menuPluginsAddReverb, "Add Reverb", fxAddReverbButton);
-            addButtonItem (menuPluginsAddDelay, "Add Delay", fxAddDelayButton);
-            m.addSeparator();
-            addButtonItem (menuPluginsSynthInit, "4OSC Preset: Init", builtInSynthPresetInitButton);
-            addButtonItem (menuPluginsSynthWarmPad, "4OSC Preset: Warm Pad", builtInSynthPresetWarmPadButton);
-            addButtonItem (menuPluginsSynthPunchBass, "4OSC Preset: Punch Bass", builtInSynthPresetPunchBassButton);
-            addButtonItem (menuPluginsSynthBrightPluck, "4OSC Preset: Bright Pluck", builtInSynthPresetBrightPluckButton);
             break;
 
         case 5:
@@ -5557,6 +6105,29 @@ juce::PopupMenu BeatMakerNoRecord::getMenuForIndex (int topLevelMenuIndex, const
             break;
 
         case 6:
+            m.addItem (menuWindowPanelWorkspace, "Timeline / Track Area", true, windowPanelWorkspaceVisible);
+            m.addItem (menuWindowPanelMixer, "Mixer Section", true, windowPanelMixerVisible);
+            m.addItem (menuWindowPanelPiano, "Piano Section", true, windowPanelPianoVisible);
+            m.addSeparator();
+            m.addItem (menuWindowPanelArrangement, "Arrangement Panel", true, windowPanelArrangementVisible);
+            m.addItem (menuWindowPanelTracks, "Tracks & Import Panel", true, windowPanelTrackVisible);
+            m.addItem (menuWindowPanelClipEditing, "Clip Editing Panel", true, windowPanelClipVisible);
+            m.addItem (menuWindowPanelMidiEditing, "MIDI Editing Panel", true, windowPanelMidiVisible);
+            m.addItem (menuWindowPanelAudioEditing, "Audio Editing Panel", true, windowPanelAudioVisible);
+            m.addItem (menuWindowPanelFxChain, "FX Chain Panel", true, windowPanelFxVisible);
+            m.addItem (menuWindowPanelTrackMixer, "Track Mixer Panel", true, windowPanelTrackMixerVisible);
+            m.addSeparator();
+            m.addItem (menuWindowPanelMixerArea, "Mixer Area", true, windowPanelMixerAreaVisible);
+            m.addItem (menuWindowPanelChannelRack, "Channel Rack", true, windowPanelChannelRackVisible);
+            m.addItem (menuWindowPanelInspector, "Inspector", true, windowPanelInspectorVisible);
+            m.addSeparator();
+            m.addItem (menuWindowPanelPianoRoll, "Piano Roll", true, windowPanelPianoRollVisible);
+            m.addItem (menuWindowPanelStepSequencer, "Step Sequencer", true, windowPanelStepSequencerVisible);
+            m.addSeparator();
+            m.addItem (menuWindowShowAllPanels, "Show All Panels", true, false);
+            break;
+
+        case 7:
             m.addItem (menuHelpShortcuts, "Shortcuts & Gestures", true, false);
             break;
 
@@ -5569,6 +6140,47 @@ juce::PopupMenu BeatMakerNoRecord::getMenuForIndex (int topLevelMenuIndex, const
 
 void BeatMakerNoRecord::menuItemSelected (int menuItemID, int)
 {
+    auto persistWindowPanelState = [this]
+    {
+        auto& properties = engine.getPropertyStorage().getPropertiesFile();
+        properties.setValue ("windowPanelWorkspaceVisible", windowPanelWorkspaceVisible);
+        properties.setValue ("windowPanelMixerVisible", windowPanelMixerVisible);
+        properties.setValue ("windowPanelPianoVisible", windowPanelPianoVisible);
+        properties.setValue ("windowPanelArrangementVisible", windowPanelArrangementVisible);
+        properties.setValue ("windowPanelTrackVisible", windowPanelTrackVisible);
+        properties.setValue ("windowPanelClipVisible", windowPanelClipVisible);
+        properties.setValue ("windowPanelMidiVisible", windowPanelMidiVisible);
+        properties.setValue ("windowPanelAudioVisible", windowPanelAudioVisible);
+        properties.setValue ("windowPanelFxVisible", windowPanelFxVisible);
+        properties.setValue ("windowPanelTrackMixerVisible", windowPanelTrackMixerVisible);
+        properties.setValue ("windowPanelMixerAreaVisible", windowPanelMixerAreaVisible);
+        properties.setValue ("windowPanelChannelRackVisible", windowPanelChannelRackVisible);
+        properties.setValue ("windowPanelInspectorVisible", windowPanelInspectorVisible);
+        properties.setValue ("windowPanelPianoRollVisible", windowPanelPianoRollVisible);
+        properties.setValue ("windowPanelStepSequencerVisible", windowPanelStepSequencerVisible);
+    };
+
+    auto applyWindowPanelChange = [this, &persistWindowPanelState]
+    {
+        persistWindowPanelState();
+        resized();
+        updateButtonsFromState();
+    };
+
+    auto setDockPanelVisibility = [this, &applyWindowPanelChange] (bool& flag,
+                                                                   bool shouldBeVisible,
+                                                                   FloatSection section)
+    {
+        flag = shouldBeVisible;
+
+        if (! shouldBeVisible && isSectionFloating (section))
+            setSectionFloating (section, false);
+        else if (shouldBeVisible)
+            setSectionFloating (section, false);
+
+        applyWindowPanelChange();
+    };
+
     switch (menuItemID)
     {
         case menuFileNew: newEditButton.triggerClick(); break;
@@ -5632,19 +6244,21 @@ void BeatMakerNoRecord::menuItemSelected (int menuItemID, int)
         case menuPluginsScanSkipped: fxScanSkippedButton.triggerClick(); break;
         case menuPluginsPrepPlayback: fxPrepPlaybackButton.triggerClick(); break;
         case menuPluginsOpenUi: fxOpenEditorButton.triggerClick(); break;
-        case menuPluginsAddBundledNova: addBundledNovaSynthToSelectedTrack(); break;
         case menuPluginsAddInstrument: fxAddExternalInstrumentButton.triggerClick(); break;
         case menuPluginsAddFx: fxAddExternalButton.triggerClick(); break;
-        case menuPluginsAddSampler: fxAddSamplerButton.triggerClick(); break;
-        case menuPluginsAdd4Osc: fxAddSynthButton.triggerClick(); break;
-        case menuPluginsAddEq: fxAddEQButton.triggerClick(); break;
-        case menuPluginsAddComp: fxAddCompButton.triggerClick(); break;
-        case menuPluginsAddReverb: fxAddReverbButton.triggerClick(); break;
-        case menuPluginsAddDelay: fxAddDelayButton.triggerClick(); break;
-        case menuPluginsSynthInit: builtInSynthPresetInitButton.triggerClick(); break;
-        case menuPluginsSynthWarmPad: builtInSynthPresetWarmPadButton.triggerClick(); break;
-        case menuPluginsSynthPunchBass: builtInSynthPresetPunchBassButton.triggerClick(); break;
-        case menuPluginsSynthBrightPluck: builtInSynthPresetBrightPluckButton.triggerClick(); break;
+        case menuPluginsAddBundledNova:
+        case menuPluginsAddSampler:
+        case menuPluginsAdd4Osc:
+        case menuPluginsAddEq:
+        case menuPluginsAddComp:
+        case menuPluginsAddReverb:
+        case menuPluginsAddDelay:
+        case menuPluginsSynthInit:
+        case menuPluginsSynthWarmPad:
+        case menuPluginsSynthPunchBass:
+        case menuPluginsSynthBrightPluck:
+            setStatus ("Built-in and bundled plugins are removed from this build.");
+            break;
 
         case menuViewMarkers: showMarkerTrackButton.triggerClick(); break;
         case menuViewArranger: showArrangerTrackButton.triggerClick(); break;
@@ -5654,9 +6268,30 @@ void BeatMakerNoRecord::menuItemSelected (int menuItemID, int)
         case menuViewFocusSelection: focusSelectionButton.triggerClick(); break;
         case menuViewCenterPlayhead: centerPlayheadButton.triggerClick(); break;
         case menuViewFitProject: fitProjectButton.triggerClick(); break;
-        case menuViewFloatWorkspace: commandManager.invokeDirectly (appCommandToggleFloatWorkspace, true); break;
-        case menuViewFloatMixer: commandManager.invokeDirectly (appCommandToggleFloatMixer, true); break;
-        case menuViewFloatPiano: commandManager.invokeDirectly (appCommandToggleFloatPiano, true); break;
+        case menuViewFloatWorkspace:
+            if (! windowPanelWorkspaceVisible)
+            {
+                windowPanelWorkspaceVisible = true;
+                applyWindowPanelChange();
+            }
+            commandManager.invokeDirectly (appCommandToggleFloatWorkspace, true);
+            break;
+        case menuViewFloatMixer:
+            if (! windowPanelMixerVisible)
+            {
+                windowPanelMixerVisible = true;
+                applyWindowPanelChange();
+            }
+            commandManager.invokeDirectly (appCommandToggleFloatMixer, true);
+            break;
+        case menuViewFloatPiano:
+            if (! windowPanelPianoVisible)
+            {
+                windowPanelPianoVisible = true;
+                applyWindowPanelChange();
+            }
+            commandManager.invokeDirectly (appCommandToggleFloatPiano, true);
+            break;
         case menuViewDockAllPanels: commandManager.invokeDirectly (appCommandDockAllPanels, true); break;
         case menuViewPianoModeSplit: setPianoEditorLayoutMode (PianoEditorLayoutMode::split, true, true); break;
         case menuViewPianoModePiano: setPianoEditorLayoutMode (PianoEditorLayoutMode::pianoRoll, true, true); break;
@@ -5685,6 +6320,103 @@ void BeatMakerNoRecord::menuItemSelected (int menuItemID, int)
         case menuViewPanelsProject: setLeftDockPanelMode (LeftDockPanelMode::project, true, true); break;
         case menuViewPanelsEditing: setLeftDockPanelMode (LeftDockPanelMode::editing, true, true); break;
         case menuViewPanelsSound: setLeftDockPanelMode (LeftDockPanelMode::sound, true, true); break;
+
+        case menuWindowPanelWorkspace:
+            setDockPanelVisibility (windowPanelWorkspaceVisible, ! windowPanelWorkspaceVisible, FloatSection::workspace);
+            break;
+        case menuWindowPanelMixer:
+            setDockPanelVisibility (windowPanelMixerVisible, ! windowPanelMixerVisible, FloatSection::mixer);
+            break;
+        case menuWindowPanelPiano:
+            setDockPanelVisibility (windowPanelPianoVisible, ! windowPanelPianoVisible, FloatSection::piano);
+            break;
+        case menuWindowPanelArrangement:
+            windowPanelArrangementVisible = ! windowPanelArrangementVisible;
+            if (windowPanelArrangementVisible)
+                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelTracks:
+            windowPanelTrackVisible = ! windowPanelTrackVisible;
+            if (windowPanelTrackVisible)
+                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelClipEditing:
+            windowPanelClipVisible = ! windowPanelClipVisible;
+            if (windowPanelClipVisible)
+                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelMidiEditing:
+            windowPanelMidiVisible = ! windowPanelMidiVisible;
+            if (windowPanelMidiVisible)
+                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelAudioEditing:
+            windowPanelAudioVisible = ! windowPanelAudioVisible;
+            if (windowPanelAudioVisible)
+                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelFxChain:
+            windowPanelFxVisible = ! windowPanelFxVisible;
+            if (windowPanelFxVisible)
+                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelTrackMixer:
+            windowPanelTrackMixerVisible = ! windowPanelTrackMixerVisible;
+            if (windowPanelTrackMixerVisible)
+                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelMixerArea:
+            windowPanelMixerAreaVisible = ! windowPanelMixerAreaVisible;
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelChannelRack:
+            windowPanelChannelRackVisible = ! windowPanelChannelRackVisible;
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelInspector:
+            windowPanelInspectorVisible = ! windowPanelInspectorVisible;
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelPianoRoll:
+            windowPanelPianoRollVisible = ! windowPanelPianoRollVisible;
+            applyWindowPanelChange();
+            break;
+        case menuWindowPanelStepSequencer:
+            windowPanelStepSequencerVisible = ! windowPanelStepSequencerVisible;
+            applyWindowPanelChange();
+            break;
+        case menuWindowShowAllPanels:
+            windowPanelWorkspaceVisible = true;
+            windowPanelMixerVisible = true;
+            windowPanelPianoVisible = true;
+            windowPanelArrangementVisible = true;
+            windowPanelTrackVisible = true;
+            windowPanelClipVisible = true;
+            windowPanelMidiVisible = true;
+            windowPanelAudioVisible = true;
+            windowPanelFxVisible = true;
+            windowPanelTrackMixerVisible = true;
+            windowPanelMixerAreaVisible = true;
+            windowPanelChannelRackVisible = true;
+            windowPanelInspectorVisible = true;
+            windowPanelPianoRollVisible = true;
+            windowPanelStepSequencerVisible = true;
+            setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
+            if (isSectionFloating (FloatSection::workspace))
+                setSectionFloating (FloatSection::workspace, false);
+            if (isSectionFloating (FloatSection::mixer))
+                setSectionFloating (FloatSection::mixer, false);
+            if (isSectionFloating (FloatSection::piano))
+                setSectionFloating (FloatSection::piano, false);
+            applyWindowPanelChange();
+            break;
 
         case menuHelpShortcuts: showShortcutOverlay(); break;
         default: break;
@@ -5907,8 +6639,6 @@ void BeatMakerNoRecord::setupSliders()
 
     defaultSynthModeBox.addItem (getDefaultSynthModeDisplayName (DefaultSynthMode::autoPreferExternal),
                                  getComboIdForDefaultSynthMode (DefaultSynthMode::autoPreferExternal));
-    defaultSynthModeBox.addItem (getDefaultSynthModeDisplayName (DefaultSynthMode::force4Osc),
-                                 getComboIdForDefaultSynthMode (DefaultSynthMode::force4Osc));
     defaultSynthModeBox.addItem (getDefaultSynthModeDisplayName (DefaultSynthMode::forceExternalVst3),
                                  getComboIdForDefaultSynthMode (DefaultSynthMode::forceExternalVst3));
     defaultSynthModeBox.setSelectedId (getComboIdForDefaultSynthMode (DefaultSynthMode::autoPreferExternal),
@@ -5946,6 +6676,24 @@ void BeatMakerNoRecord::setupSliders()
         workspaceBottomHeightRatio = (float) juce::jlimit (0.34, 0.78, properties.getDoubleValue ("layoutWorkspaceBottomRatio", workspaceBottomHeightRatio));
         mixerPianoHeightRatio = (float) juce::jlimit (0.24, 0.72, properties.getDoubleValue ("layoutMixerPianoRatio", mixerPianoHeightRatio));
         pianoStepHeightRatio = (float) juce::jlimit (0.30, 0.72, properties.getDoubleValue ("layoutPianoStepRatio", pianoStepHeightRatio));
+        mixerRackHeightRatio = (float) juce::jlimit (0.30, 0.80, properties.getDoubleValue ("layoutMixerRackRatio", mixerRackHeightRatio));
+        rackInspectorWidthRatio = (float) juce::jlimit (0.35, 0.78, properties.getDoubleValue ("layoutRackInspectorRatio", rackInspectorWidthRatio));
+        channelRackControlsHeightRatio = (float) juce::jlimit (0.18, 0.72, properties.getDoubleValue ("layoutRackControlsRatio", channelRackControlsHeightRatio));
+        windowPanelWorkspaceVisible = properties.getBoolValue ("windowPanelWorkspaceVisible", windowPanelWorkspaceVisible);
+        windowPanelMixerVisible = properties.getBoolValue ("windowPanelMixerVisible", windowPanelMixerVisible);
+        windowPanelPianoVisible = properties.getBoolValue ("windowPanelPianoVisible", windowPanelPianoVisible);
+        windowPanelArrangementVisible = properties.getBoolValue ("windowPanelArrangementVisible", windowPanelArrangementVisible);
+        windowPanelTrackVisible = properties.getBoolValue ("windowPanelTrackVisible", windowPanelTrackVisible);
+        windowPanelClipVisible = properties.getBoolValue ("windowPanelClipVisible", windowPanelClipVisible);
+        windowPanelMidiVisible = properties.getBoolValue ("windowPanelMidiVisible", windowPanelMidiVisible);
+        windowPanelAudioVisible = properties.getBoolValue ("windowPanelAudioVisible", windowPanelAudioVisible);
+        windowPanelFxVisible = properties.getBoolValue ("windowPanelFxVisible", windowPanelFxVisible);
+        windowPanelTrackMixerVisible = properties.getBoolValue ("windowPanelTrackMixerVisible", windowPanelTrackMixerVisible);
+        windowPanelMixerAreaVisible = properties.getBoolValue ("windowPanelMixerAreaVisible", windowPanelMixerAreaVisible);
+        windowPanelChannelRackVisible = properties.getBoolValue ("windowPanelChannelRackVisible", windowPanelChannelRackVisible);
+        windowPanelInspectorVisible = properties.getBoolValue ("windowPanelInspectorVisible", windowPanelInspectorVisible);
+        windowPanelPianoRollVisible = properties.getBoolValue ("windowPanelPianoRollVisible", windowPanelPianoRollVisible);
+        windowPanelStepSequencerVisible = properties.getBoolValue ("windowPanelStepSequencerVisible", windowPanelStepSequencerVisible);
         uiDensityMode = getUiDensityModeForStorageValue (properties.getValue ("uiDensityMode",
                                                                                 getUiDensityStorageValue (UiDensityMode::comfortable)));
     }
@@ -6284,10 +7032,10 @@ void BeatMakerNoRecord::setupSliders()
     chordDirectoryOctaveBox.setTooltip ("Base register for generated chords and arps.");
     chordDirectoryVoicingBox.setTooltip ("Chord voicing style used when generating notes.");
     chordDirectoryDensityBox.setTooltip ("How often chord movement happens within each bar.");
-    chordDirectoryPreviewPresetBox.setTooltip ("Internal synth preview patch for directory previews.");
+    chordDirectoryPreviewPresetBox.setTooltip ("Built-in synth preview presets are unavailable in this build.");
     chordDirectoryVelocitySlider.setTooltip ("Base MIDI velocity used by chord directory generation.");
     chordDirectorySwingSlider.setTooltip ("Swing amount applied to alternating directory events.");
-    chordDirectoryPreviewButton.setTooltip ("Generate + audition the directory pattern through an internal synth.");
+    chordDirectoryPreviewButton.setTooltip ("Generate + audition the directory pattern through the selected external instrument.");
     chordDirectoryApplyButton.setTooltip ("Write the directory pattern into the selected MIDI clip.");
     chordDirectoryExportMidiButton.setTooltip ("Export current directory selection as a MIDI file.");
     chordDirectoryExportWavButton.setTooltip ("Render current directory selection to WAV in Exports.");
@@ -6638,7 +7386,6 @@ juce::String BeatMakerNoRecord::getDefaultSynthModeStorageValue (DefaultSynthMod
 {
     switch (mode)
     {
-        case DefaultSynthMode::force4Osc: return "force-4osc";
         case DefaultSynthMode::forceExternalVst3: return "force-vst3";
         case DefaultSynthMode::autoPreferExternal:
         default: return "auto";
@@ -6649,10 +7396,9 @@ juce::String BeatMakerNoRecord::getDefaultSynthModeDisplayName (DefaultSynthMode
 {
     switch (mode)
     {
-        case DefaultSynthMode::force4Osc: return "Force 4OSC";
         case DefaultSynthMode::forceExternalVst3: return "Force external VST3";
         case DefaultSynthMode::autoPreferExternal:
-        default: return "Auto (VST3 > AU > 4OSC)";
+        default: return "Auto (VST3 > AU)";
     }
 }
 
@@ -6660,8 +7406,7 @@ int BeatMakerNoRecord::getComboIdForDefaultSynthMode (DefaultSynthMode mode)
 {
     switch (mode)
     {
-        case DefaultSynthMode::force4Osc: return 2;
-        case DefaultSynthMode::forceExternalVst3: return 3;
+        case DefaultSynthMode::forceExternalVst3: return 2;
         case DefaultSynthMode::autoPreferExternal:
         default: return 1;
     }
@@ -6669,9 +7414,6 @@ int BeatMakerNoRecord::getComboIdForDefaultSynthMode (DefaultSynthMode mode)
 
 auto BeatMakerNoRecord::getDefaultSynthModeForStorageValue (const juce::String& value) -> DefaultSynthMode
 {
-    if (value.equalsIgnoreCase ("force-4osc"))
-        return DefaultSynthMode::force4Osc;
-
     if (value.equalsIgnoreCase ("force-vst3"))
         return DefaultSynthMode::forceExternalVst3;
 
@@ -6682,8 +7424,7 @@ auto BeatMakerNoRecord::getDefaultSynthModeForComboId (int comboId) -> DefaultSy
 {
     switch (comboId)
     {
-        case 2: return DefaultSynthMode::force4Osc;
-        case 3: return DefaultSynthMode::forceExternalVst3;
+        case 2: return DefaultSynthMode::forceExternalVst3;
         case 1:
         default: return DefaultSynthMode::autoPreferExternal;
     }
@@ -8484,18 +9225,20 @@ void BeatMakerNoRecord::paintMidiPianoRoll (juce::Graphics& g, juce::Rectangle<i
 
 void BeatMakerNoRecord::paintMixerArea (juce::Graphics& g, juce::Rectangle<int> area)
 {
-    g.fillAll (juce::Colour::fromRGB (18, 24, 34));
+    g.fillAll (juce::Colour::fromRGB (16, 22, 31));
 
     auto frame = area.reduced (2);
-    g.setColour (juce::Colour::fromRGB (12, 16, 23).withAlpha (0.86f));
-    g.fillRoundedRectangle (frame.toFloat(), 4.0f);
+    juce::ColourGradient mixerBg (juce::Colour::fromRGB (14, 20, 29).withAlpha (0.97f), (float) frame.getX(), (float) frame.getY(),
+                                  juce::Colour::fromRGB (10, 14, 22).withAlpha (0.96f), (float) frame.getX(), (float) frame.getBottom(), false);
+    g.setGradientFill (mixerBg);
+    g.fillRoundedRectangle (frame.toFloat(), 5.0f);
 
     if (edit == nullptr)
     {
         g.setColour (juce::Colours::white.withAlpha (0.75f));
         g.drawText ("No edit loaded", frame, juce::Justification::centred, false);
         g.setColour (juce::Colours::white.withAlpha (0.15f));
-        g.drawRoundedRectangle (frame.toFloat().reduced (0.5f), 4.0f, 1.0f);
+        g.drawRoundedRectangle (frame.toFloat().reduced (0.5f), 5.0f, 1.0f);
         return;
     }
 
@@ -8505,42 +9248,60 @@ void BeatMakerNoRecord::paintMixerArea (juce::Graphics& g, juce::Rectangle<int> 
         g.setColour (juce::Colours::white.withAlpha (0.75f));
         g.drawText ("No tracks. Add a track to use the mixer.", frame, juce::Justification::centred, false);
         g.setColour (juce::Colours::white.withAlpha (0.15f));
-        g.drawRoundedRectangle (frame.toFloat().reduced (0.5f), 4.0f, 1.0f);
+        g.drawRoundedRectangle (frame.toFloat().reduced (0.5f), 5.0f, 1.0f);
         return;
     }
+
+    auto drawSectionTag = [&g] (juce::Rectangle<int> sectionArea, const juce::String& text)
+    {
+        if (sectionArea.getWidth() < 36 || sectionArea.getHeight() < 10 || text.isEmpty())
+            return;
+
+        auto tag = sectionArea.removeFromTop (11).removeFromLeft (juce::jmin (62, sectionArea.getWidth()));
+        g.setColour (juce::Colour::fromRGB (36, 50, 69).withAlpha (0.92f));
+        g.fillRoundedRectangle (tag.toFloat(), 3.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.76f));
+        g.setFont (juce::Font (juce::FontOptions (8.1f, juce::Font::bold)));
+        g.drawFittedText (text, tag.reduced (4, 0), juce::Justification::centredLeft, 1);
+    };
 
     auto* selectedTrack = getSelectedTrackOrFirst();
     const auto routingLayout = getMixerRoutingLayout (frame);
     const auto stripsArea = routingLayout.stripsArea;
     auto busArea = routingLayout.busArea;
     const int trackCount = tracks.size();
-    const int routeTop = busArea.getY() + 42;
-    const int routeBottom = juce::jmax (routeTop + 4, busArea.getBottom() - 28);
+    const int routeTop = busArea.getY() + 52;
+    const int routeBottom = juce::jmax (routeTop + 6, busArea.getBottom() - 38);
     const float railX = (float) routingLayout.railX;
 
-    g.setColour (juce::Colours::black.withAlpha (0.28f));
-    g.fillRoundedRectangle (busArea.toFloat().translated (0.0f, 1.0f), 7.0f);
+    g.setColour (juce::Colours::black.withAlpha (0.34f));
+    g.fillRoundedRectangle (busArea.toFloat().translated (0.0f, 2.0f), 8.0f);
 
-    juce::ColourGradient busGradient (juce::Colour::fromRGB (30, 43, 61).withAlpha (0.88f), (float) busArea.getX(), (float) busArea.getY(),
-                                      juce::Colour::fromRGB (19, 27, 38).withAlpha (0.92f), (float) busArea.getX(), (float) busArea.getBottom(), false);
+    juce::ColourGradient busGradient (juce::Colour::fromRGB (31, 45, 63).withAlpha (0.92f), (float) busArea.getX(), (float) busArea.getY(),
+                                      juce::Colour::fromRGB (17, 24, 35).withAlpha (0.94f), (float) busArea.getX(), (float) busArea.getBottom(), false);
     g.setGradientFill (busGradient);
-    g.fillRoundedRectangle (busArea.toFloat(), 7.0f);
+    g.fillRoundedRectangle (busArea.toFloat(), 8.0f);
+    g.setColour (juce::Colours::white.withAlpha (0.20f));
+    g.drawRoundedRectangle (busArea.toFloat().reduced (0.5f), 8.0f, 1.0f);
 
-    g.setColour (juce::Colours::white.withAlpha (0.18f));
-    g.drawRoundedRectangle (busArea.toFloat().reduced (0.5f), 7.0f, 1.0f);
-
-    g.setColour (juce::Colours::white.withAlpha (0.90f));
+    auto busHeader = busArea.removeFromTop (22);
+    g.setColour (juce::Colours::white.withAlpha (0.94f));
     g.setFont (juce::Font (juce::FontOptions (11.6f, juce::Font::bold)));
-    g.drawFittedText ("MASTER BUS", busArea.removeFromTop (20).reduced (8, 0), juce::Justification::centredLeft, 1);
-    g.setColour (juce::Colours::white.withAlpha (0.58f));
-    g.setFont (juce::Font (juce::FontOptions (10.0f, juce::Font::plain)));
-    g.drawFittedText ("Track outputs route through these wires.", busArea.removeFromTop (14).reduced (8, 0), juce::Justification::centredLeft, 1);
+    g.drawFittedText ("MASTER", busHeader.removeFromLeft (78).reduced (6, 0), juce::Justification::centredLeft, 1);
+    g.setColour (juce::Colours::white.withAlpha (0.64f));
+    g.setFont (juce::Font (juce::FontOptions (9.2f, juce::Font::plain)));
+    g.drawFittedText ("ST OUT", busHeader.reduced (6, 0), juce::Justification::centredRight, 1);
 
-    const auto railRect = juce::Rectangle<float> (railX - 1.5f, (float) routeTop, 3.0f, (float) juce::jmax (2, routeBottom - routeTop));
-    g.setColour (juce::Colour::fromRGB (74, 118, 178).withAlpha (0.58f));
-    g.fillRoundedRectangle (railRect, 1.5f);
+    auto busSubHeader = busArea.removeFromTop (18);
+    g.setColour (juce::Colours::white.withAlpha (0.52f));
+    g.setFont (juce::Font (juce::FontOptions (8.8f, juce::Font::plain)));
+    g.drawFittedText ("Track channel strips route to this bus rail.", busSubHeader.reduced (8, 0), juce::Justification::centredLeft, 1);
+
+    const auto railRect = juce::Rectangle<float> (railX - 2.0f, (float) routeTop, 4.0f, (float) juce::jmax (2, routeBottom - routeTop));
+    g.setColour (juce::Colour::fromRGB (70, 122, 186).withAlpha (0.56f));
+    g.fillRoundedRectangle (railRect, 2.0f);
     g.setColour (juce::Colours::white.withAlpha (0.22f));
-    g.drawRoundedRectangle (railRect, 1.5f, 1.0f);
+    g.drawRoundedRectangle (railRect, 2.0f, 1.0f);
 
     for (int i = 0; i < trackCount; ++i)
     {
@@ -8554,116 +9315,279 @@ void BeatMakerNoRecord::paintMixerArea (juce::Graphics& g, juce::Rectangle<int> 
         const bool solo = track->isSolo (false);
         const auto stripRect = layout.strip;
         const auto trackState = getMixerTrackUiState (*track);
+        const auto wireColour = getRoutingWireColour (selected, muted, solo);
 
-        const float sourceX = (float) (layout.strip.getRight() - 2);
+        const float sourceX = (float) (layout.strip.getRight() - 3);
         const float sourceY = (float) layout.panTrack.getCentreY();
         const float targetY = trackCount <= 1
                                   ? (float) (routeTop + routeBottom) * 0.5f
                                   : juce::jmap ((float) i, 0.0f, (float) juce::jmax (1, trackCount - 1), (float) routeTop, (float) routeBottom);
-        const auto wireColour = getRoutingWireColour (selected, muted, solo);
 
         juce::Path routePath;
         routePath.startNewSubPath (sourceX, sourceY);
-        routePath.cubicTo (sourceX + 22.0f, sourceY, railX - 24.0f, targetY, railX, targetY);
-
-        g.setColour (wireColour.withAlpha (wireColour.getFloatAlpha() * 0.28f));
-        g.strokePath (routePath, juce::PathStrokeType (4.8f));
+        routePath.cubicTo (sourceX + 24.0f, sourceY, railX - 26.0f, targetY, railX, targetY);
+        g.setColour (wireColour.withAlpha (wireColour.getFloatAlpha() * 0.26f));
+        g.strokePath (routePath, juce::PathStrokeType (5.6f));
         g.setColour (wireColour);
-        g.strokePath (routePath, juce::PathStrokeType (2.2f));
-
-        g.setColour (wireColour.withAlpha (0.95f));
-        g.fillEllipse (sourceX - 2.8f, sourceY - 2.8f, 5.6f, 5.6f);
+        g.strokePath (routePath, juce::PathStrokeType (2.4f));
+        g.setColour (wireColour.withAlpha (0.94f));
+        g.fillEllipse (sourceX - 2.9f, sourceY - 2.9f, 5.8f, 5.8f);
 
         juce::Path arrow;
-        arrow.addTriangle (railX + 1.0f, targetY, railX - 7.0f, targetY - 4.0f, railX - 7.0f, targetY + 4.0f);
+        arrow.addTriangle (railX + 1.2f, targetY, railX - 7.6f, targetY - 4.4f, railX - 7.6f, targetY + 4.4f);
         g.fillPath (arrow);
 
-        const auto trackAccent = track->getColour().withSaturation (0.48f).withAlpha (selected ? 0.84f : 0.52f);
-        auto stripColour = juce::Colour::fromRGB (28, 38, 54);
+        const auto trackAccent = track->getColour().withSaturation (0.54f).withAlpha (selected ? 0.90f : 0.56f);
+        auto stripColour = juce::Colour::fromRGB (27, 37, 52);
         if (selected)
-            stripColour = stripColour.brighter (0.10f);
+            stripColour = stripColour.brighter (0.13f);
 
-        g.setColour (juce::Colours::black.withAlpha (0.24f));
-        g.fillRoundedRectangle (stripRect.toFloat().translated (0.0f, 1.0f), 6.0f);
+        g.setColour (juce::Colours::black.withAlpha (0.30f));
+        g.fillRoundedRectangle (stripRect.toFloat().translated (0.0f, 2.0f), 7.0f);
 
-        juce::ColourGradient stripFill (stripColour.brighter (0.05f), (float) stripRect.getX(), (float) stripRect.getY(),
-                                        stripColour.darker (0.18f), (float) stripRect.getX(), (float) stripRect.getBottom(), false);
+        juce::ColourGradient stripFill (stripColour.brighter (0.06f), (float) stripRect.getX(), (float) stripRect.getY(),
+                                        stripColour.darker (0.20f), (float) stripRect.getX(), (float) stripRect.getBottom(), false);
         g.setGradientFill (stripFill);
-        g.fillRoundedRectangle (stripRect.toFloat(), 6.0f);
+        g.fillRoundedRectangle (stripRect.toFloat(), 7.0f);
+        g.setColour (selected ? juce::Colours::white.withAlpha (0.28f) : juce::Colours::white.withAlpha (0.14f));
+        g.drawRoundedRectangle (stripRect.toFloat().reduced (0.5f), 7.0f, 1.0f);
 
-        g.setColour (trackAccent);
         auto accentStrip = stripRect;
-        g.fillRoundedRectangle (accentStrip.removeFromTop (3).toFloat(), 2.0f);
+        g.setColour (trackAccent);
+        g.fillRoundedRectangle (accentStrip.removeFromTop (3).toFloat(), 1.5f);
 
-        g.setColour (juce::Colours::white.withAlpha (selected ? 0.94f : 0.78f));
-        g.setFont (juce::Font (juce::FontOptions (11.8f, juce::Font::bold)));
         auto titleArea = layout.header;
-        titleArea.reduce (1, 0);
+        auto stripIndex = titleArea.removeFromLeft (18).reduced (1, 1);
+        g.setColour (juce::Colour::fromRGB (20, 30, 44).withAlpha (0.90f));
+        g.fillRoundedRectangle (stripIndex.toFloat(), 3.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.84f));
+        g.setFont (juce::Font (juce::FontOptions (9.0f, juce::Font::bold)));
+        g.drawFittedText (juce::String (i + 1), stripIndex, juce::Justification::centred, 1);
 
-        if (trackState.hasInstrument)
-            titleArea.removeFromLeft (11);
-        if (trackState.userFxCount > 0)
-            titleArea.removeFromRight (18);
-
-        g.drawFittedText (track->getName(), titleArea, juce::Justification::centred, 1);
+        g.setColour (juce::Colours::white.withAlpha (selected ? 0.96f : 0.82f));
+        g.setFont (juce::Font (juce::FontOptions (10.4f, juce::Font::bold)));
+        g.drawFittedText (track->getName(), titleArea.reduced (2, 0), juce::Justification::centredLeft, 1);
 
         if (trackState.hasInstrument)
         {
-            g.setColour (juce::Colour::fromRGB (118, 224, 167).withAlpha (0.90f));
-            g.fillEllipse ((float) layout.header.getX() + 3.0f, (float) layout.header.getCentreY() - 3.0f, 6.0f, 6.0f);
+            g.setColour (juce::Colour::fromRGB (116, 218, 162).withAlpha (0.92f));
+            g.fillEllipse ((float) layout.header.getX() + 2.0f, (float) layout.header.getCentreY() - 2.8f, 5.6f, 5.6f);
         }
 
         if (trackState.userFxCount > 0)
         {
-            auto fxBadge = juce::Rectangle<int> (layout.header.getRight() - 16, layout.header.getY() + 2, 14, 12);
-            g.setColour (juce::Colour::fromRGB (59, 108, 170).withAlpha (0.95f));
+            auto fxBadge = juce::Rectangle<int> (layout.header.getRight() - 17, layout.header.getY() + 2, 15, 12);
+            g.setColour (juce::Colour::fromRGB (60, 112, 179).withAlpha (0.94f));
             g.fillRoundedRectangle (fxBadge.toFloat(), 3.0f);
             g.setColour (juce::Colours::white.withAlpha (0.95f));
-            g.setFont (juce::Font (juce::FontOptions (9.2f, juce::Font::bold)));
+            g.setFont (juce::Font (juce::FontOptions (8.6f, juce::Font::bold)));
             g.drawFittedText (juce::String (trackState.userFxCount), fxBadge, juce::Justification::centred, 1);
         }
 
-        const auto muteRect = layout.muteButton;
-        const auto soloRect = layout.soloButton;
-        drawMixerModeButton (g, muteRect, "M", muted, juce::Colour::fromRGB (75, 156, 110));
-        drawMixerModeButton (g, soloRect, "S", solo, juce::Colour::fromRGB (196, 152, 60));
+        drawSectionTag (layout.settingButton, "STRIP");
+        g.setColour (juce::Colour::fromRGB (33, 44, 60).withAlpha (0.96f));
+        g.fillRoundedRectangle (layout.settingButton.toFloat(), 3.2f);
+        g.setColour (juce::Colours::white.withAlpha (0.76f));
+        g.setFont (juce::Font (juce::FontOptions (8.8f, juce::Font::plain)));
+        g.drawFittedText ("Setting", layout.settingButton.reduced (3, 0), juce::Justification::centred, 1);
+
+        const int slotRowsMax = juce::jlimit (3, 8, juce::jmax (3, (layout.insertsArea.getHeight() + 2) / 14));
+        const auto pluginSlots = getMixerPluginSlots (*track, slotRowsMax);
+
+        auto instrumentSlot = layout.instrumentSlot;
+        drawSectionTag (instrumentSlot, "INPUT");
+        g.setColour (juce::Colour::fromRGB (37, 56, 86).withAlpha (0.98f));
+        g.fillRoundedRectangle (instrumentSlot.toFloat(), 3.2f);
+        g.setColour (juce::Colours::white.withAlpha (0.92f));
+        g.setFont (juce::Font (juce::FontOptions (8.6f, juce::Font::bold)));
+        g.drawFittedText (pluginSlots.instrument.isNotEmpty() ? pluginSlots.instrument : "No Instrument",
+                          instrumentSlot.reduced (4, 0),
+                          juce::Justification::centredLeft,
+                          1);
+
+        auto insertArea = getMixerInsertAreaWithoutSends (layout);
+        const auto sendLanes = getMixerSendLaneLayouts (layout);
+        juce::Rectangle<int> sendsArea;
+        for (const auto& lane : sendLanes)
+        {
+            if (lane.row.isEmpty())
+                continue;
+
+            sendsArea = sendsArea.isEmpty() ? lane.row : sendsArea.getUnion (lane.row);
+        }
+
+        drawSectionTag (insertArea, "INSERTS");
+        g.setColour (juce::Colour::fromRGB (25, 33, 47).withAlpha (0.96f));
+        g.fillRoundedRectangle (insertArea.toFloat(), 4.0f);
+
+        const int slotGap = 2;
+        const int slotRows = juce::jlimit (2, 8, juce::jmax (2, (insertArea.getHeight() + 2) / 14));
+        const int slotHeight = juce::jmax (10, (insertArea.getHeight() - (slotRows - 1) * slotGap) / juce::jmax (1, slotRows));
+        auto slotCursor = insertArea;
+
+        for (int slotIndex = 0; slotIndex < slotRows; ++slotIndex)
+        {
+            auto slot = slotCursor.removeFromTop (slotHeight);
+            if (slotCursor.getHeight() > 0)
+                slotCursor.removeFromTop (slotGap);
+
+            const bool hasPlugin = slotIndex < pluginSlots.inserts.size();
+            g.setColour (hasPlugin ? juce::Colour::fromRGB (67, 113, 180).withAlpha (0.94f)
+                                   : juce::Colour::fromRGB (33, 43, 58).withAlpha (0.92f));
+            g.fillRoundedRectangle (slot.toFloat(), 2.8f);
+            g.setColour (juce::Colours::white.withAlpha (hasPlugin ? 0.90f : 0.42f));
+            g.setFont (juce::Font (juce::FontOptions (8.2f, hasPlugin ? juce::Font::bold : juce::Font::plain)));
+            g.drawFittedText (hasPlugin ? pluginSlots.inserts[slotIndex] : ("Insert " + juce::String (slotIndex + 1)),
+                              slot.reduced (4, 0),
+                              juce::Justification::centredLeft,
+                              1);
+        }
+
+        if (pluginSlots.hiddenInsertCount > 0)
+        {
+            auto moreRect = juce::Rectangle<int> (insertArea.getRight() - 22, insertArea.getY() + 2, 20, 10);
+            g.setColour (juce::Colour::fromRGB (87, 145, 208).withAlpha (0.95f));
+            g.fillRoundedRectangle (moreRect.toFloat(), 2.8f);
+            g.setColour (juce::Colours::white.withAlpha (0.94f));
+            g.setFont (juce::Font (juce::FontOptions (7.9f, juce::Font::bold)));
+            g.drawFittedText ("+" + juce::String (pluginSlots.hiddenInsertCount), moreRect, juce::Justification::centred, 1);
+        }
+
+        drawSectionTag (sendsArea, "SENDS");
+        for (int sendSlot = 0; sendSlot < mixerSendSlotCount; ++sendSlot)
+        {
+            const auto& lane = sendLanes[(size_t) sendSlot];
+            if (lane.row.isEmpty())
+                continue;
+
+            const auto& sendState = trackState.sends[(size_t) sendSlot];
+            const bool active = sendState.enabled && sendState.busNumber >= 0;
+            const juce::String sendName = sendSlot == 0 ? "A" : "B";
+            const juce::String routeLabel = active ? sendState.routeName : "Off";
+
+            g.setColour (active ? juce::Colour::fromRGB (58, 103, 162).withAlpha (0.90f)
+                                : juce::Colour::fromRGB (34, 43, 56).withAlpha (0.90f));
+            g.fillRoundedRectangle (lane.row.toFloat(), 2.6f);
+
+            g.setColour (active ? juce::Colour::fromRGB (94, 167, 230).withAlpha (0.96f)
+                                : juce::Colour::fromRGB (57, 73, 95).withAlpha (0.94f));
+            g.fillRoundedRectangle (lane.slotBadge.toFloat(), 2.2f);
+            g.setColour (juce::Colours::white.withAlpha (0.94f));
+            g.setFont (juce::Font (juce::FontOptions (7.8f, juce::Font::bold)));
+            g.drawFittedText (sendName, lane.slotBadge, juce::Justification::centred, 1);
+
+            g.setColour (juce::Colours::white.withAlpha (active ? 0.86f : 0.52f));
+            g.setFont (juce::Font (juce::FontOptions (7.6f, juce::Font::bold)));
+            g.drawFittedText (routeLabel, lane.routeText, juce::Justification::centredLeft, 1);
+
+            g.setColour (juce::Colour::fromRGB (22, 31, 45).withAlpha (0.94f));
+            g.fillRoundedRectangle (lane.levelLane.toFloat(), 2.0f);
+            g.setColour (juce::Colours::white.withAlpha (0.18f));
+            g.drawRoundedRectangle (lane.levelLane.toFloat().reduced (0.3f), 2.0f, 1.0f);
+
+            if (active)
+            {
+                const double sendNorm = getMixerSendLevelNormalised (sendState.gainDb);
+                auto levelFill = lane.levelLane.withWidth (roundToInt ((float) lane.levelLane.getWidth() * (float) sendNorm));
+                if (levelFill.getWidth() > 0)
+                {
+                    juce::ColourGradient sendGrad (juce::Colour::fromRGB (94, 174, 232).withAlpha (0.94f),
+                                                   (float) levelFill.getX(),
+                                                   (float) levelFill.getY(),
+                                                   juce::Colour::fromRGB (59, 118, 192).withAlpha (0.94f),
+                                                   (float) levelFill.getRight(),
+                                                   (float) levelFill.getY(),
+                                                   false);
+                    g.setGradientFill (sendGrad);
+                    g.fillRoundedRectangle (levelFill.toFloat(), 2.0f);
+                }
+            }
+
+            g.setColour (juce::Colours::white.withAlpha (active ? 0.84f : 0.48f));
+            g.setFont (juce::Font (juce::FontOptions (7.1f, juce::Font::plain)));
+            g.drawFittedText (active ? juce::String (sendState.gainDb, 1) + " dB" : "--",
+                              lane.levelLane,
+                              juce::Justification::centred,
+                              1);
+        }
+
+        drawMixerModeButton (g, layout.automationButton, "Read", true, juce::Colour::fromRGB (76, 146, 96));
+        drawMixerModeButton (g, layout.muteButton, "M", muted, juce::Colour::fromRGB (73, 154, 111));
+        drawMixerModeButton (g, layout.soloButton, "S", solo, juce::Colour::fromRGB (202, 156, 63));
 
         const auto faderTrack = layout.faderTrack;
-
         const auto level = getMixerVolumeNormalised (trackState.volumeDb);
         const int thumbY = roundToInt (juce::jmap (level, (double) faderTrack.getBottom(), (double) faderTrack.getY()));
-        const auto thumb = juce::Rectangle<int> (faderTrack.getX() - 5, thumbY - 4, faderTrack.getWidth() + 10, 8);
+        const auto thumb = juce::Rectangle<int> (faderTrack.getX() - 7, thumbY - 5, faderTrack.getWidth() + 14, 10);
 
-        g.setColour (juce::Colour::fromRGB (30, 38, 50));
-        g.fillRoundedRectangle (faderTrack.toFloat(), 3.0f);
-        g.setColour (juce::Colour::fromRGB (82, 149, 223).withAlpha (0.74f));
-        g.fillRoundedRectangle (juce::Rectangle<int> (faderTrack.getX(), thumbY, faderTrack.getWidth(), faderTrack.getBottom() - thumbY).toFloat(), 3.0f);
-        g.setColour (juce::Colour::fromRGB (173, 214, 255).withAlpha (0.96f));
-        g.fillRoundedRectangle (thumb.toFloat(), 3.0f);
+        auto faderWell = faderTrack.expanded (8, 2);
+        drawSectionTag (faderWell, "FADER");
+        g.setColour (juce::Colour::fromRGB (22, 31, 44).withAlpha (0.94f));
+        g.fillRoundedRectangle (faderWell.toFloat(), 4.0f);
+
+        g.setColour (juce::Colour::fromRGB (31, 40, 53));
+        g.fillRoundedRectangle (faderTrack.toFloat(), 3.2f);
+
+        const double dbTicks[] = { -60.0, -24.0, -12.0, -6.0, 0.0, 6.0, 12.0 };
+        for (const double db : dbTicks)
+        {
+            const int y = roundToInt (juce::jmap (getMixerVolumeNormalised (db),
+                                                  (double) faderTrack.getBottom(),
+                                                  (double) faderTrack.getY()));
+            const int tickLen = db == 0.0 ? 7 : 5;
+            g.setColour (juce::Colours::white.withAlpha (db == 0.0 ? 0.34f : 0.18f));
+            g.drawHorizontalLine (y, (float) faderTrack.getX() - (float) tickLen, (float) faderTrack.getX() - 1.0f);
+        }
+
+        g.setColour (juce::Colour::fromRGB (84, 156, 227).withAlpha (0.76f));
+        g.fillRoundedRectangle (juce::Rectangle<int> (faderTrack.getX(),
+                                                      thumbY,
+                                                      faderTrack.getWidth(),
+                                                      juce::jmax (0, faderTrack.getBottom() - thumbY)).toFloat(),
+                                3.2f);
+
+        g.setColour (juce::Colour::fromRGB (184, 224, 255).withAlpha (0.96f));
+        g.fillRoundedRectangle (thumb.toFloat(), 3.2f);
+        g.setColour (juce::Colours::white.withAlpha (0.34f));
+        g.drawRoundedRectangle (thumb.toFloat(), 3.2f, 1.0f);
+
+        auto miniMeter = juce::Rectangle<int> (faderTrack.getRight() + 4, faderTrack.getY(), 4, faderTrack.getHeight());
+        if (miniMeter.getRight() <= stripRect.getRight() - 4)
+        {
+            g.setColour (juce::Colour::fromRGB (20, 29, 42));
+            g.fillRoundedRectangle (miniMeter.toFloat(), 2.0f);
+            const double meterLevel = muted ? 0.0 : juce::jlimit (0.0, 1.0, level * (solo ? 1.0 : 0.86));
+            const int meterFillHeight = juce::jlimit (0, miniMeter.getHeight(), roundToInt (meterLevel * miniMeter.getHeight()));
+            auto meterFill = miniMeter.removeFromBottom (meterFillHeight);
+            juce::ColourGradient meterGrad (juce::Colour::fromRGB (96, 216, 132), (float) meterFill.getX(), (float) meterFill.getBottom(),
+                                            juce::Colour::fromRGB (234, 196, 82), (float) meterFill.getX(), (float) meterFill.getY(), false);
+            g.setGradientFill (meterGrad);
+            g.fillRoundedRectangle (meterFill.toFloat(), 2.0f);
+        }
 
         const auto panTrack = layout.panTrack;
-        g.setColour (juce::Colour::fromRGB (52, 68, 89));
-        g.fillRoundedRectangle (panTrack.toFloat(), 2.0f);
+        g.setColour (juce::Colour::fromRGB (49, 66, 88).withAlpha (0.98f));
+        g.fillRoundedRectangle (panTrack.toFloat(), 2.2f);
         const int centreX = panTrack.getCentreX();
-        g.setColour (juce::Colours::white.withAlpha (0.20f));
+        g.setColour (juce::Colours::white.withAlpha (0.22f));
         g.drawVerticalLine (centreX, (float) panTrack.getY() - 2.0f, (float) panTrack.getBottom() + 2.0f);
-
         const double panNormalised = juce::jlimit (0.0, 1.0, ((double) trackState.pan + 1.0) * 0.5);
         const int panX = roundToInt (juce::jmap (panNormalised, (double) panTrack.getX(), (double) panTrack.getRight()));
-        g.setColour (juce::Colour::fromRGB (146, 201, 255).withAlpha (0.95f));
-        g.fillEllipse ((float) panX - 4.5f, (float) panTrack.getCentreY() - 4.5f, 9.0f, 9.0f);
+        g.setColour (juce::Colour::fromRGB (150, 204, 255).withAlpha (0.96f));
+        g.fillEllipse ((float) panX - 5.0f, (float) panTrack.getCentreY() - 5.0f, 10.0f, 10.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.38f));
+        g.drawEllipse ((float) panX - 5.0f, (float) panTrack.getCentreY() - 5.0f, 10.0f, 10.0f, 1.0f);
 
-        g.setColour (juce::Colours::white.withAlpha (0.74f));
-        g.setFont (juce::Font (juce::FontOptions (9.8f, juce::Font::plain)));
-        const auto panText = juce::String (trackState.pan, 2);
-        g.drawFittedText (juce::String (trackState.volumeDb, 1) + " dB", juce::Rectangle<int> (stripRect.getX() + 6, stripRect.getBottom() - 26, stripRect.getWidth() - 12, 10), juce::Justification::centred, 1);
-        g.drawFittedText ("Pan " + panText, juce::Rectangle<int> (stripRect.getX() + 6, stripRect.getBottom() - 14, stripRect.getWidth() - 12, 10), juce::Justification::centred, 1);
-
-        g.setColour (juce::Colours::white.withAlpha (selected ? 0.24f : 0.12f));
-        g.drawRoundedRectangle (stripRect.toFloat().reduced (0.5f), 6.0f, 1.0f);
+        auto valueRow = juce::Rectangle<int> (stripRect.getX() + 6, stripRect.getBottom() - 25, stripRect.getWidth() - 12, 20);
+        auto dbCell = valueRow.removeFromTop (9);
+        auto panCell = valueRow.removeFromBottom (9);
+        g.setColour (juce::Colours::white.withAlpha (0.76f));
+        g.setFont (juce::Font (juce::FontOptions (8.8f, juce::Font::plain)));
+        g.drawFittedText (juce::String (trackState.volumeDb, 1) + " dB", dbCell, juce::Justification::centred, 1);
+        g.drawFittedText ("Pan " + juce::String (trackState.pan, 2), panCell, juce::Justification::centred, 1);
 
         g.setColour (wireColour.withAlpha (0.82f));
-        g.drawEllipse ((float) (stripRect.getRight() - 7), (float) layout.panTrack.getCentreY() - 3.0f, 6.0f, 6.0f, 1.4f);
+        g.drawEllipse ((float) (stripRect.getRight() - 8), (float) layout.panTrack.getCentreY() - 3.0f, 6.0f, 6.0f, 1.4f);
     }
 
     const float liveLevel = outputLevelMeter != nullptr
@@ -8676,32 +9600,266 @@ void BeatMakerNoRecord::paintMixerArea (juce::Graphics& g, juce::Rectangle<int> 
     auto meterArea = routingLayout.meterArea;
     if (! meterArea.isEmpty())
     {
-        g.setColour (juce::Colour::fromRGB (24, 34, 47));
-        g.fillRoundedRectangle (meterArea.toFloat(), 3.0f);
+        g.setColour (juce::Colour::fromRGB (22, 31, 44));
+        g.fillRoundedRectangle (meterArea.toFloat(), 3.2f);
+
+        for (int i = 0; i <= 5; ++i)
+        {
+            const int y = meterArea.getY() + roundToInt ((float) i / 5.0f * (float) meterArea.getHeight());
+            g.setColour (juce::Colours::white.withAlpha (i == 0 || i == 5 ? 0.22f : 0.12f));
+            g.drawHorizontalLine (y, (float) meterArea.getX(), (float) meterArea.getRight());
+        }
 
         const int fillHeight = juce::jlimit (0, meterArea.getHeight(), roundToInt (masterLevel * meterArea.getHeight()));
         auto filled = meterArea.removeFromBottom (fillHeight);
-        juce::ColourGradient meterGrad (juce::Colour::fromRGB (102, 219, 136), (float) filled.getX(), (float) filled.getBottom(),
-                                        juce::Colour::fromRGB (239, 202, 86), (float) filled.getX(), (float) filled.getY(), false);
+        juce::ColourGradient meterGrad (juce::Colour::fromRGB (103, 220, 136), (float) filled.getX(), (float) filled.getBottom(),
+                                        juce::Colour::fromRGB (241, 205, 88), (float) filled.getX(), (float) filled.getY(), false);
         g.setGradientFill (meterGrad);
         g.fillRoundedRectangle (filled.toFloat(), 2.0f);
 
-        g.setColour (juce::Colours::white.withAlpha (0.22f));
-        g.drawRoundedRectangle (routingLayout.meterArea.toFloat().reduced (0.5f), 3.0f, 1.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.24f));
+        g.drawRoundedRectangle (routingLayout.meterArea.toFloat().reduced (0.5f), 3.2f, 1.0f);
 
-        auto meterLabel = routingLayout.meterArea.withY (routingLayout.meterArea.getBottom() + 4).withHeight (14);
-        g.setColour (juce::Colours::white.withAlpha (0.68f));
-        g.setFont (juce::Font (juce::FontOptions (9.8f, juce::Font::bold)));
+        auto meterLabel = routingLayout.meterArea.withY (routingLayout.meterArea.getBottom() + 5).withHeight (14);
+        g.setColour (juce::Colours::white.withAlpha (0.72f));
+        g.setFont (juce::Font (juce::FontOptions (9.6f, juce::Font::bold)));
         g.drawFittedText ("OUT", meterLabel, juce::Justification::centred, 1);
     }
 
-    g.setColour (juce::Colours::white.withAlpha (0.14f));
-    g.drawRoundedRectangle (frame.toFloat().reduced (0.5f), 4.0f, 1.0f);
+    g.setColour (juce::Colours::white.withAlpha (0.16f));
+    g.drawRoundedRectangle (frame.toFloat().reduced (0.5f), 5.0f, 1.0f);
 
-    auto hintArea = routingLayout.busArea.withTrimmedTop (routingLayout.busArea.getHeight() - 20).reduced (6, 0);
-    g.setColour (juce::Colours::white.withAlpha (0.55f));
-    g.setFont (juce::Font (juce::FontOptions (9.6f, juce::Font::plain)));
-    g.drawFittedText ("Bright wire = active route", hintArea, juce::Justification::centredLeft, 1);
+    auto hintArea = routingLayout.busArea.withTrimmedTop (routingLayout.busArea.getHeight() - 20).reduced (8, 0);
+    g.setColour (juce::Colours::white.withAlpha (0.56f));
+    g.setFont (juce::Font (juce::FontOptions (9.3f, juce::Font::plain)));
+    g.drawFittedText ("Bright wire = active route • Click send row to assign aux destination • Drag send bar for level", hintArea, juce::Justification::centredLeft, 1);
+}
+
+void BeatMakerNoRecord::paintChannelRackPreview (juce::Graphics& g, juce::Rectangle<int> area)
+{
+    g.fillAll (juce::Colour::fromRGB (15, 20, 29));
+
+    auto frame = area.reduced (2);
+    g.setColour (juce::Colours::black.withAlpha (0.26f));
+    g.fillRoundedRectangle (frame.toFloat().translated (0.0f, 1.0f), 5.0f);
+
+    juce::ColourGradient bg (juce::Colour::fromRGB (19, 26, 37).withAlpha (0.95f), (float) frame.getX(), (float) frame.getY(),
+                             juce::Colour::fromRGB (12, 17, 25).withAlpha (0.93f), (float) frame.getX(), (float) frame.getBottom(), false);
+    g.setGradientFill (bg);
+    g.fillRoundedRectangle (frame.toFloat(), 5.0f);
+
+    if (edit == nullptr)
+    {
+        g.setColour (juce::Colours::white.withAlpha (0.74f));
+        g.drawText ("No edit loaded", frame, juce::Justification::centred, false);
+        g.setColour (juce::Colours::white.withAlpha (0.15f));
+        g.drawRoundedRectangle (frame.toFloat().reduced (0.5f), 5.0f, 1.0f);
+        return;
+    }
+
+    auto tracks = te::getAudioTracks (*edit);
+    if (tracks.isEmpty())
+    {
+        g.setColour (juce::Colours::white.withAlpha (0.74f));
+        g.drawText ("Add tracks to populate the channel rack", frame, juce::Justification::centred, false);
+        g.setColour (juce::Colours::white.withAlpha (0.15f));
+        g.drawRoundedRectangle (frame.toFloat().reduced (0.5f), 5.0f, 1.0f);
+        return;
+    }
+
+    auto header = frame.removeFromTop (22);
+    g.setColour (juce::Colour::fromRGB (32, 43, 61).withAlpha (0.94f));
+    g.fillRoundedRectangle (header.toFloat(), 3.0f);
+    g.setColour (juce::Colours::white.withAlpha (0.92f));
+    g.setFont (juce::Font (juce::FontOptions (10.2f, juce::Font::bold)));
+    g.drawText ("Channel Rack", header.reduced (8, 0), juce::Justification::centredLeft, false);
+    g.setColour (juce::Colours::white.withAlpha (0.62f));
+    g.setFont (juce::Font (juce::FontOptions (9.0f, juce::Font::plain)));
+    g.drawText ("Click strip to select track", header.reduced (8, 0), juce::Justification::centredRight, false);
+
+    frame.removeFromTop (5);
+
+    auto* selectedTrack = getSelectedTrackOrFirst();
+    const int trackCount = tracks.size();
+    for (int i = 0; i < trackCount; ++i)
+    {
+        auto* track = tracks.getUnchecked (i);
+        if (track == nullptr)
+            continue;
+
+        const auto layout = getChannelRackStripLayout (frame, i, trackCount);
+        const bool selected = track == selectedTrack;
+        const auto stripState = getMixerTrackUiState (*track);
+        const int slotRows = juce::jlimit (6, 11, juce::jmax (6, (layout.inserts.getHeight() + 2) / 13));
+        const auto slotState = getMixerPluginSlots (*track, juce::jmax (1, slotRows - 1));
+
+        const auto stripColour = selected ? juce::Colour::fromRGB (41, 63, 95)
+                                          : juce::Colour::fromRGB (31, 43, 60);
+        g.setColour (juce::Colours::black.withAlpha (0.22f));
+        g.fillRoundedRectangle (layout.strip.toFloat().translated (0.0f, 1.0f), 4.5f);
+
+        juce::ColourGradient stripBg (stripColour.brighter (0.06f), (float) layout.strip.getX(), (float) layout.strip.getY(),
+                                      stripColour.darker (0.15f), (float) layout.strip.getX(), (float) layout.strip.getBottom(), false);
+        g.setGradientFill (stripBg);
+        g.fillRoundedRectangle (layout.strip.toFloat(), 4.5f);
+
+        g.setColour (track->getColour().withSaturation (0.50f).withAlpha (selected ? 0.88f : 0.52f));
+        auto accent = layout.strip;
+        g.fillRoundedRectangle (accent.removeFromTop (2).toFloat(), 1.5f);
+
+        g.setColour (juce::Colours::white.withAlpha (selected ? 0.95f : 0.80f));
+        g.setFont (juce::Font (juce::FontOptions (9.1f, juce::Font::bold)));
+        g.drawFittedText (track->getName(), layout.header.reduced (2, 0), juce::Justification::centredLeft, 1);
+
+        auto insertCursor = layout.inserts;
+        const int gap = 2;
+        const int slotHeight = juce::jmax (10, (insertCursor.getHeight() - (slotRows - 1) * gap) / slotRows);
+
+        for (int row = 0; row < slotRows; ++row)
+        {
+            auto slot = insertCursor.removeFromTop (slotHeight);
+            if (insertCursor.getHeight() > 0)
+                insertCursor.removeFromTop (gap);
+
+            const bool isInstrumentRow = row == 0;
+            const bool hasInstrument = slotState.instrument.isNotEmpty();
+            const bool hasFx = (row - 1) >= 0 && (row - 1) < slotState.inserts.size();
+
+            juce::String text;
+            if (isInstrumentRow)
+                text = hasInstrument ? slotState.instrument : "Instrument";
+            else if (hasFx)
+                text = slotState.inserts[row - 1];
+            else
+                text = "Insert " + juce::String (row);
+
+            const bool active = isInstrumentRow ? hasInstrument : hasFx;
+            const auto slotColour = isInstrumentRow
+                                        ? (active ? juce::Colour::fromRGB (58, 108, 178) : juce::Colour::fromRGB (43, 58, 80))
+                                        : (active ? juce::Colour::fromRGB (69, 116, 186) : juce::Colour::fromRGB (34, 45, 61));
+
+            g.setColour (slotColour.withAlpha (0.94f));
+            g.fillRoundedRectangle (slot.toFloat(), 2.6f);
+            g.setColour (juce::Colours::white.withAlpha (active ? 0.90f : 0.42f));
+            g.setFont (juce::Font (juce::FontOptions (8.2f, active ? juce::Font::bold : juce::Font::plain)));
+            g.drawFittedText (text, slot.reduced (4, 0), juce::Justification::centredLeft, 1);
+        }
+
+        if (slotState.hiddenInsertCount > 0)
+        {
+            auto more = juce::Rectangle<int> (layout.inserts.getRight() - 20, layout.inserts.getY() + 1, 18, 10);
+            g.setColour (juce::Colour::fromRGB (91, 152, 223).withAlpha (0.94f));
+            g.fillRoundedRectangle (more.toFloat(), 2.4f);
+            g.setColour (juce::Colours::white.withAlpha (0.94f));
+            g.setFont (juce::Font (juce::FontOptions (7.6f, juce::Font::bold)));
+            g.drawText ("+" + juce::String (slotState.hiddenInsertCount), more, juce::Justification::centred, false);
+        }
+
+        const auto panTrack = layout.panZone;
+        g.setColour (juce::Colour::fromRGB (50, 66, 89));
+        g.fillRoundedRectangle (panTrack.toFloat(), 2.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.18f));
+        g.drawVerticalLine (panTrack.getCentreX(), (float) panTrack.getY() - 1.0f, (float) panTrack.getBottom() + 1.0f);
+        const double panNorm = juce::jlimit (0.0, 1.0, ((double) stripState.pan + 1.0) * 0.5);
+        const int panX = roundToInt (juce::jmap (panNorm, (double) panTrack.getX(), (double) panTrack.getRight()));
+        g.setColour (juce::Colour::fromRGB (157, 211, 255).withAlpha (0.94f));
+        g.fillEllipse ((float) panX - 3.5f, (float) panTrack.getCentreY() - 3.5f, 7.0f, 7.0f);
+
+        const auto level = getMixerVolumeNormalised (stripState.volumeDb);
+        const int thumbY = roundToInt (juce::jmap (level, (double) layout.faderTrack.getBottom(), (double) layout.faderTrack.getY()));
+        const auto thumb = juce::Rectangle<int> (layout.faderTrack.getX() - 4, thumbY - 3, layout.faderTrack.getWidth() + 8, 6);
+        g.setColour (juce::Colour::fromRGB (33, 44, 60));
+        g.fillRoundedRectangle (layout.faderTrack.toFloat(), 2.4f);
+        g.setColour (juce::Colour::fromRGB (94, 176, 118).withAlpha (0.78f));
+        g.fillRoundedRectangle (juce::Rectangle<int> (layout.faderTrack.getX(), thumbY, layout.faderTrack.getWidth(), layout.faderTrack.getBottom() - thumbY).toFloat(), 2.4f);
+        g.setColour (juce::Colour::fromRGB (207, 242, 214).withAlpha (0.95f));
+        g.fillRoundedRectangle (thumb.toFloat(), 2.4f);
+
+        auto footer = layout.strip.withY (layout.strip.getBottom() - 12).withHeight (11).reduced (3, 0);
+        g.setColour (juce::Colour::fromRGB (33, 44, 60).withAlpha (0.90f));
+        g.fillRoundedRectangle (footer.toFloat(), 2.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.76f));
+        g.setFont (juce::Font (juce::FontOptions (7.4f, juce::Font::plain)));
+        g.drawFittedText (juce::String (stripState.volumeDb, 1) + " dB", footer, juce::Justification::centred, 1);
+
+        g.setColour (juce::Colours::white.withAlpha (selected ? 0.24f : 0.12f));
+        g.drawRoundedRectangle (layout.strip.toFloat().reduced (0.5f), 4.5f, 1.0f);
+    }
+
+    g.setColour (juce::Colours::white.withAlpha (0.16f));
+    g.drawRoundedRectangle (area.toFloat().reduced (0.5f), 4.0f, 1.0f);
+}
+
+void BeatMakerNoRecord::handleChannelRackPreviewMouseDown (const juce::MouseEvent& e, int width, int height)
+{
+    if (edit == nullptr || width <= 0 || height <= 0)
+    {
+        mixerDragMode = MixerDragMode::none;
+        mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
+        return;
+    }
+
+    auto tracks = te::getAudioTracks (*edit);
+    if (tracks.isEmpty())
+    {
+        mixerDragMode = MixerDragMode::none;
+        mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
+        return;
+    }
+
+    auto area = juce::Rectangle<int> (0, 0, width, height).reduced (4);
+    area.removeFromTop (27);
+
+    int clickedTrack = -1;
+    for (int i = 0; i < tracks.size(); ++i)
+    {
+        const auto layout = getChannelRackStripLayout (area, i, tracks.size());
+        if (layout.strip.contains (e.getPosition()))
+        {
+            clickedTrack = i;
+            break;
+        }
+    }
+
+    if (clickedTrack < 0)
+        return;
+
+    auto* track = tracks.getUnchecked (clickedTrack);
+    if (track == nullptr)
+        return;
+
+    selectionManager.selectOnly (track);
+    updateTrackControlsFromSelection();
+    updateButtonsFromState();
+    channelRackPreview.repaint();
+
+    if (e.mods.isRightButtonDown())
+    {
+        enum MenuIds
+        {
+            menuAddInstrument = 1,
+            menuAddFx,
+            menuOpenPlugin
+        };
+
+        juce::PopupMenu menu;
+        menu.addSectionHeader (track->getName());
+        menu.addItem (menuAddInstrument, "Add AU/VST3 Instrument...");
+        menu.addItem (menuAddFx, "Add AU/VST3 Effect...");
+        menu.addItem (menuOpenPlugin, "Open Selected Plugin UI", getSelectedTrackPlugin() != nullptr);
+
+        switch (menu.show())
+        {
+            case menuAddInstrument: addExternalInstrumentPluginToSelectedTrack(); break;
+            case menuAddFx: addExternalPluginToSelectedTrack(); break;
+            case menuOpenPlugin: openSelectedTrackPluginEditor(); break;
+            default: break;
+        }
+
+        channelRackPreview.repaint();
+    }
 }
 
 void BeatMakerNoRecord::handleStepSequencerMouseDown (const juce::MouseEvent& e, int width, int height)
@@ -8829,6 +9987,225 @@ void BeatMakerNoRecord::handleStepSequencerMouseUp (const juce::MouseEvent&)
     resetStepSequencerDragState();
 }
 
+bool BeatMakerNoRecord::ensureAuxReturnTrackForBus (int busNumber)
+{
+    if (edit == nullptr || ! juce::isPositiveAndBelow (busNumber, mixerMaxAuxDestinationCount))
+        return false;
+
+    if (edit->getTransport().isPlaying())
+        return false;
+
+    if (findAuxReturnTrackForBus (*edit, busNumber) != nullptr)
+        return false;
+
+    const int tracksBefore = te::getAudioTracks (*edit).size();
+    edit->ensureNumberOfAudioTracks (tracksBefore + 1);
+
+    auto tracks = te::getAudioTracks (*edit);
+    auto* returnTrack = tracks.isEmpty() ? nullptr : tracks.getLast();
+    if (returnTrack == nullptr)
+        return false;
+
+    auto returnPlugin = edit->getPluginCache().createNewPlugin (te::AuxReturnPlugin::xmlTypeName, {});
+    if (returnPlugin == nullptr)
+        return false;
+
+    returnTrack->pluginList.insertPlugin (returnPlugin, 0, nullptr);
+    if (auto* auxReturn = dynamic_cast<te::AuxReturnPlugin*> (returnPlugin.get()))
+        auxReturn->busNumber.setValue (busNumber, &edit->getUndoManager());
+
+    if (edit->getAuxBusName (busNumber).trim().isEmpty())
+        edit->setAuxBusName (busNumber, "Aux " + juce::String (busNumber + 1));
+
+    returnTrack->setName (getMixerAuxBusDisplayName (*edit, busNumber) + " Return");
+    returnTrack->setColour (juce::Colour::fromRGB (86, 159, 214));
+    returnTrack->setMute (false);
+    returnTrack->setSolo (false);
+
+    syncViewControlsFromState();
+    markPlaybackRoutingNeedsPreparation();
+    return true;
+}
+
+bool BeatMakerNoRecord::assignMixerSendDestination (te::AudioTrack& track, int sendSlot, int busNumber)
+{
+    if (edit == nullptr || ! juce::isPositiveAndBelow (sendSlot, mixerSendSlotCount))
+        return false;
+
+    auto sendLookup = getMixerSendLookup (track);
+    auto* sendPlugin = sendLookup.slots[(size_t) sendSlot];
+    bool changed = false;
+
+    if (busNumber < 0)
+    {
+        if (sendPlugin == nullptr)
+            return false;
+
+        sendPlugin->deleteFromParent();
+        changed = true;
+    }
+    else
+    {
+        if (! juce::isPositiveAndBelow (busNumber, mixerMaxAuxDestinationCount))
+            return false;
+
+        if (sendPlugin == nullptr)
+        {
+            auto plugin = edit->getPluginCache().createNewPlugin (te::AuxSendPlugin::xmlTypeName, {});
+            if (plugin == nullptr)
+                return false;
+
+            track.pluginList.insertPlugin (plugin, getPluginInsertIndexForTrack (track, false), nullptr);
+            sendPlugin = dynamic_cast<te::AuxSendPlugin*> (plugin.get());
+            if (sendPlugin == nullptr)
+                return false;
+
+            changed = true;
+        }
+
+        const int previousSlot = (int) sendPlugin->state.getProperty (mixerSendSlotPropertyId, -1);
+        if (previousSlot != sendSlot)
+        {
+            sendPlugin->state.setProperty (mixerSendSlotPropertyId, sendSlot, &edit->getUndoManager());
+            changed = true;
+        }
+
+        if (sendPlugin->getBusNumber() != busNumber)
+        {
+            sendPlugin->busNumber.setValue (busNumber, &edit->getUndoManager());
+            changed = true;
+        }
+
+        if (! sendPlugin->isEnabled())
+        {
+            sendPlugin->setEnabled (true);
+            changed = true;
+        }
+
+        if (edit->getAuxBusName (busNumber).trim().isEmpty())
+            edit->setAuxBusName (busNumber, "Aux " + juce::String (busNumber + 1));
+
+        if (ensureAuxReturnTrackForBus (busNumber))
+            changed = true;
+    }
+
+    if (changed)
+    {
+        refreshSelectedTrackPluginList();
+        markPlaybackRoutingNeedsPreparation();
+        updateButtonsFromState();
+        mixerArea.repaint();
+        channelRackPreview.repaint();
+    }
+
+    return changed;
+}
+
+bool BeatMakerNoRecord::setMixerSendLevelDb (te::AudioTrack& track, int sendSlot, float gainDb)
+{
+    if (! juce::isPositiveAndBelow (sendSlot, mixerSendSlotCount))
+        return false;
+
+    auto sendLookup = getMixerSendLookup (track);
+    auto* sendPlugin = sendLookup.slots[(size_t) sendSlot];
+    if (sendPlugin == nullptr)
+        return false;
+
+    const float clamped = juce::jlimit (-60.0f, 6.0f, gainDb);
+    if (std::abs (sendPlugin->getGainDb() - clamped) < 0.01f)
+        return false;
+
+    sendPlugin->setGainDb (clamped);
+    mixerArea.repaint();
+    return true;
+}
+
+void BeatMakerNoRecord::showMixerSendDestinationMenu (te::AudioTrack& track, int sendSlot, juce::Rectangle<int> targetBounds)
+{
+    if (edit == nullptr || ! juce::isPositiveAndBelow (sendSlot, mixerSendSlotCount))
+        return;
+
+    auto sendLookup = getMixerSendLookup (track);
+    auto* currentSend = sendLookup.slots[(size_t) sendSlot];
+    const int currentBus = (currentSend != nullptr && currentSend->isEnabled()) ? currentSend->getBusNumber() : -1;
+    const bool hasCurrentSend = currentSend != nullptr;
+    const juce::String sendLabel = "Send " + juce::String::charToString (sendSlot == 0 ? 'A' : 'B');
+
+    enum MenuIds
+    {
+        sendMenuOff = 1,
+        sendMenuBusBase = 1001
+    };
+
+    juce::PopupMenu menu;
+    menu.addSectionHeader (track.getName() + " - " + sendLabel);
+    menu.addItem (sendMenuOff, "Off", true, currentBus < 0);
+    menu.addSeparator();
+
+    for (int bus = 0; bus < mixerMaxAuxDestinationCount; ++bus)
+    {
+        const bool hasReturn = findAuxReturnTrackForBus (*edit, bus) != nullptr;
+        juce::String label = getMixerAuxBusDisplayName (*edit, bus);
+        label << (hasReturn ? " (Return Ready)" : " (Create Return)");
+        menu.addItem (sendMenuBusBase + bus, label, true, bus == currentBus);
+    }
+
+    const int selected = menu.showMenu (juce::PopupMenu::Options()
+                                            .withTargetScreenArea (mixerArea.localAreaToGlobal (targetBounds.expanded (2, 2))));
+    if (selected <= 0)
+        return;
+
+    int targetBus = -1;
+    if (selected >= sendMenuBusBase && selected < sendMenuBusBase + mixerMaxAuxDestinationCount)
+        targetBus = selected - sendMenuBusBase;
+
+    bool structuralChange = selected == sendMenuOff ? hasCurrentSend
+                                                    : ! hasCurrentSend;
+    if (targetBus >= 0 && findAuxReturnTrackForBus (*edit, targetBus) == nullptr)
+        structuralChange = true;
+
+    if (structuralChange && edit->getTransport().isPlaying())
+    {
+        setStatus ("Stop playback before adding/removing send plugins.");
+        return;
+    }
+
+    if (selected == sendMenuOff)
+    {
+        if (! hasCurrentSend)
+        {
+            setStatus (sendLabel + " is already off.");
+            return;
+        }
+
+        edit->getUndoManager().beginNewTransaction ("Mixer Send Routing");
+        if (assignMixerSendDestination (track, sendSlot, -1))
+            setStatus (sendLabel + " turned off on " + track.getName() + ".");
+
+        return;
+    }
+
+    if (targetBus >= 0)
+    {
+        const int busNumber = targetBus;
+        const bool hadReturnBefore = findAuxReturnTrackForBus (*edit, busNumber) != nullptr;
+
+        edit->getUndoManager().beginNewTransaction ("Mixer Send Routing");
+        if (assignMixerSendDestination (track, sendSlot, busNumber))
+        {
+            const bool hasReturnNow = findAuxReturnTrackForBus (*edit, busNumber) != nullptr;
+            auto status = sendLabel + " routed to " + getMixerAuxBusDisplayName (*edit, busNumber) + ".";
+            if (! hadReturnBefore && hasReturnNow)
+                status << " Created return track.";
+            setStatus (status);
+        }
+        else
+        {
+            setStatus (sendLabel + " already routed to " + getMixerAuxBusDisplayName (*edit, busNumber) + ".");
+        }
+    }
+}
+
 void BeatMakerNoRecord::handleMixerAreaMouseDown (const juce::MouseEvent& e, int width, int height)
 {
     auto syncMixerUi = [this]
@@ -8839,11 +10216,21 @@ void BeatMakerNoRecord::handleMixerAreaMouseDown (const juce::MouseEvent& e, int
     };
 
     if (edit == nullptr || width <= 0 || height <= 0)
+    {
+        mixerDragMode = MixerDragMode::none;
+        mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
         return;
+    }
 
     auto tracks = te::getAudioTracks (*edit);
     if (tracks.isEmpty())
+    {
+        mixerDragMode = MixerDragMode::none;
+        mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
         return;
+    }
 
     const auto routingLayout = getMixerRoutingLayout (juce::Rectangle<int> (0, 0, width, height));
     const auto stripsArea = routingLayout.stripsArea;
@@ -8885,6 +10272,7 @@ void BeatMakerNoRecord::handleMixerAreaMouseDown (const juce::MouseEvent& e, int
 
         mixerDragMode = MixerDragMode::none;
         mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
         return;
     }
 
@@ -8904,18 +10292,41 @@ void BeatMakerNoRecord::handleMixerAreaMouseDown (const juce::MouseEvent& e, int
     {
         mixerDragMode = MixerDragMode::none;
         mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
         return;
     }
 
     auto* track = tracks.getUnchecked (clickedTrackIndex);
     if (track == nullptr)
+    {
+        mixerDragMode = MixerDragMode::none;
+        mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
         return;
+    }
 
     selectionManager.selectOnly (track);
     syncMixerUi();
 
+    const auto layout = getMixerStripLayout (stripsArea, clickedTrackIndex, tracks.size());
+
     if (e.mods.isRightButtonDown())
     {
+        const auto sendLanes = getMixerSendLaneLayouts (layout);
+        for (int sendSlot = 0; sendSlot < mixerSendSlotCount; ++sendSlot)
+        {
+            const auto& lane = sendLanes[(size_t) sendSlot];
+            if (! lane.row.isEmpty() && lane.row.contains (e.getPosition()))
+            {
+                showMixerSendDestinationMenu (*track, sendSlot, lane.row);
+                mixerDragMode = MixerDragMode::none;
+                mixerDragTrackIndex = -1;
+                mixerDragSendSlot = -1;
+                syncMixerUi();
+                return;
+            }
+        }
+
         enum TrackMenuIds
         {
             trackMenuToggleMute = 1,
@@ -8968,11 +10379,12 @@ void BeatMakerNoRecord::handleMixerAreaMouseDown (const juce::MouseEvent& e, int
                 break;
         }
 
+        mixerDragMode = MixerDragMode::none;
+        mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
         syncMixerUi();
         return;
     }
-
-    const auto layout = getMixerStripLayout (stripsArea, clickedTrackIndex, tracks.size());
 
     if (auto* volumePlugin = track->getVolumePlugin())
     {
@@ -8991,6 +10403,7 @@ void BeatMakerNoRecord::handleMixerAreaMouseDown (const juce::MouseEvent& e, int
 
             mixerDragMode = MixerDragMode::none;
             mixerDragTrackIndex = -1;
+            mixerDragSendSlot = -1;
             syncMixerUi();
 
             if (shouldResetVolume && shouldResetPan)
@@ -9009,6 +10422,7 @@ void BeatMakerNoRecord::handleMixerAreaMouseDown (const juce::MouseEvent& e, int
         track->setMute (! track->isMuted (false));
         mixerDragMode = MixerDragMode::none;
         mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
         syncMixerUi();
         return;
     }
@@ -9018,11 +10432,58 @@ void BeatMakerNoRecord::handleMixerAreaMouseDown (const juce::MouseEvent& e, int
         track->setSolo (! track->isSolo (false));
         mixerDragMode = MixerDragMode::none;
         mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
+        syncMixerUi();
+        return;
+    }
+
+    const auto sendLanes = getMixerSendLaneLayouts (layout);
+    const auto sendLookup = getMixerSendLookup (*track);
+
+    for (int sendSlot = 0; sendSlot < mixerSendSlotCount; ++sendSlot)
+    {
+        const auto& lane = sendLanes[(size_t) sendSlot];
+        if (lane.row.isEmpty() || ! lane.row.contains (e.getPosition()))
+            continue;
+
+        auto* sendPlugin = sendLookup.slots[(size_t) sendSlot];
+        const juce::String sendLabel = "Send " + juce::String::charToString (sendSlot == 0 ? 'A' : 'B');
+
+        if (sendPlugin != nullptr
+            && lane.levelLane.contains (e.getPosition())
+            && ! e.mods.isRightButtonDown())
+        {
+            if (e.getNumberOfClicks() >= 2 || e.mods.isAltDown())
+            {
+                edit->getUndoManager().beginNewTransaction ("Reset Mixer Send Level");
+                if (setMixerSendLevelDb (*track, sendSlot, 0.0f))
+                    setStatus ("Reset " + sendLabel + " level to 0.0 dB.");
+
+                mixerDragMode = MixerDragMode::none;
+                mixerDragTrackIndex = -1;
+                mixerDragSendSlot = -1;
+                syncMixerUi();
+                return;
+            }
+
+            edit->getUndoManager().beginNewTransaction ("Adjust Mixer Send Level");
+            mixerDragMode = MixerDragMode::sendLevel;
+            mixerDragTrackIndex = clickedTrackIndex;
+            mixerDragSendSlot = sendSlot;
+            handleMixerAreaMouseDrag (e, width, height);
+            return;
+        }
+
+        showMixerSendDestinationMenu (*track, sendSlot, lane.row);
+        mixerDragMode = MixerDragMode::none;
+        mixerDragTrackIndex = -1;
+        mixerDragSendSlot = -1;
         syncMixerUi();
         return;
     }
 
     mixerDragTrackIndex = clickedTrackIndex;
+    mixerDragSendSlot = -1;
 
     if (layout.faderTrack.expanded (12, 4).contains (e.getPosition()))
         mixerDragMode = MixerDragMode::volume;
@@ -9047,12 +10508,26 @@ void BeatMakerNoRecord::handleMixerAreaMouseDrag (const juce::MouseEvent& e, int
     if (track == nullptr)
         return;
 
+    const auto stripsArea = getMixerRoutingLayout (juce::Rectangle<int> (0, 0, width, height)).stripsArea;
+    const auto layout = getMixerStripLayout (stripsArea, mixerDragTrackIndex, tracks.size());
+
+    if (mixerDragMode == MixerDragMode::sendLevel)
+    {
+        if (! juce::isPositiveAndBelow (mixerDragSendSlot, mixerSendSlotCount))
+            return;
+
+        const auto sendLanes = getMixerSendLaneLayouts (layout);
+        const auto lane = sendLanes[(size_t) mixerDragSendSlot].levelLane;
+        if (lane.isEmpty())
+            return;
+
+        setMixerSendLevelDb (*track, mixerDragSendSlot, (float) getMixerSendLevelDbFromX (e.x, lane));
+        return;
+    }
+
     auto* volumePlugin = track->getVolumePlugin();
     if (volumePlugin == nullptr)
         return;
-
-    const auto stripsArea = getMixerRoutingLayout (juce::Rectangle<int> (0, 0, width, height)).stripsArea;
-    const auto layout = getMixerStripLayout (stripsArea, mixerDragTrackIndex, tracks.size());
 
     if (mixerDragMode == MixerDragMode::volume)
         volumePlugin->setVolumeDb ((float) getMixerVolumeDbFromY (e.y, layout.faderTrack));
@@ -9073,9 +10548,32 @@ void BeatMakerNoRecord::handleMixerAreaMouseUp (const juce::MouseEvent&)
         setStatus ("Adjusted mixer volume.");
     else if (mixerDragMode == MixerDragMode::pan)
         setStatus ("Adjusted mixer pan.");
+    else if (mixerDragMode == MixerDragMode::sendLevel)
+    {
+        if (edit != nullptr
+            && mixerDragTrackIndex >= 0
+            && juce::isPositiveAndBelow (mixerDragSendSlot, mixerSendSlotCount))
+        {
+            auto tracks = te::getAudioTracks (*edit);
+            if (mixerDragTrackIndex < tracks.size())
+            {
+                if (auto* track = tracks.getUnchecked (mixerDragTrackIndex))
+                {
+                    const auto sendLookup = getMixerSendLookup (*track);
+                    if (auto* send = sendLookup.slots[(size_t) mixerDragSendSlot])
+                    {
+                        const auto sendLabel = "Send " + juce::String::charToString (mixerDragSendSlot == 0 ? 'A' : 'B');
+                        setStatus ("Adjusted " + sendLabel + " level to "
+                                   + juce::String (send->getGainDb(), 1) + " dB.");
+                    }
+                }
+            }
+        }
+    }
 
     mixerDragMode = MixerDragMode::none;
     mixerDragTrackIndex = -1;
+    mixerDragSendSlot = -1;
     updateTrackControlsFromSelection();
     mixerArea.repaint();
 }
@@ -9939,6 +11437,7 @@ void BeatMakerNoRecord::refreshChannelRackInspector()
 
     channelRackTrackBox.clear (juce::dontSendNotification);
     channelRackPluginBox.clear (juce::dontSendNotification);
+    channelRackPluginIndexMap.clear();
 
     auto* selectedTrack = getSelectedTrackOrFirst();
 
@@ -9968,18 +11467,27 @@ void BeatMakerNoRecord::refreshChannelRackInspector()
         auto plugins = selectedTrack->pluginList.getPlugins();
         int selectedPluginId = 0;
         int itemId = 1;
-        for (auto* plugin : plugins)
+        for (int pluginIndex = 0; pluginIndex < plugins.size(); ++pluginIndex)
         {
+            auto* plugin = plugins[pluginIndex].get();
             if (plugin == nullptr)
+                continue;
+
+            if (isMixerUtilityPlugin (*plugin))
                 continue;
 
             juce::String pluginName = plugin->getName().trim();
             if (pluginName.isEmpty())
                 pluginName = plugin->getPluginType();
+
+            const bool isInstrument = isExternalInstrumentPluginForUi (*plugin);
+            pluginName = (isInstrument ? "[INST] " : "[FX] ") + pluginName;
+
             if (! plugin->isEnabled())
                 pluginName = "[Bypassed] " + pluginName;
 
             channelRackPluginBox.addItem (pluginName, itemId);
+            channelRackPluginIndexMap.add (pluginIndex);
 
             if (auto* selectedPlugin = getSelectedTrackPlugin(); selectedPlugin == plugin)
                 selectedPluginId = itemId;
@@ -9988,7 +11496,18 @@ void BeatMakerNoRecord::refreshChannelRackInspector()
         }
 
         if (selectedPluginId == 0 && channelRackPluginBox.getNumItems() > 0)
-            selectedPluginId = juce::jlimit (1, channelRackPluginBox.getNumItems(), fxChainBox.getSelectedId());
+        {
+            const int selectedFxIndex = fxChainBox.getSelectedId() - 1;
+            for (int i = 0; i < channelRackPluginIndexMap.size(); ++i)
+                if (channelRackPluginIndexMap.getUnchecked (i) == selectedFxIndex)
+                {
+                    selectedPluginId = i + 1;
+                    break;
+                }
+
+            if (selectedPluginId == 0)
+                selectedPluginId = 1;
+        }
 
         if (selectedPluginId > 0)
             channelRackPluginBox.setSelectedId (selectedPluginId, juce::dontSendNotification);
@@ -10017,6 +11536,7 @@ void BeatMakerNoRecord::refreshChannelRackInspector()
     inspectorMeterLabel.setText ("OUT: " + juce::String (outDb, 1) + " dB", juce::dontSendNotification);
 
     updatingChannelRackControls = false;
+    channelRackPreview.repaint();
 }
 
 void BeatMakerNoRecord::refreshBuiltInSynthControlsFromSelection()
@@ -10241,7 +11761,6 @@ void BeatMakerNoRecord::updateButtonsFromState()
     }();
     const bool hasMidiContextTrack = (midiContextTrack != nullptr);
     const bool midiContextHasInstrument = hasMidiContextTrack && trackHasInstrumentPlugin (*midiContextTrack);
-    const bool hasBuiltInSynth = (getSelectedBuiltInSynthPlugin() != nullptr);
     auto* selectedFxPlugin = getSelectedTrackPlugin();
     const bool hasSelectedFx = (selectedFxPlugin != nullptr);
     const bool canBypassSelectedFx = hasSelectedFx && selectedFxPlugin->canBeDisabled();
@@ -10466,7 +11985,7 @@ void BeatMakerNoRecord::updateButtonsFromState()
     chordDirectoryOctaveBox.setEnabled (hasEdit);
     chordDirectoryVoicingBox.setEnabled (hasEdit);
     chordDirectoryDensityBox.setEnabled (hasEdit);
-    chordDirectoryPreviewPresetBox.setEnabled (hasEdit);
+    chordDirectoryPreviewPresetBox.setEnabled (false);
     chordDirectoryVelocitySlider.setEnabled (hasEdit);
     chordDirectorySwingSlider.setEnabled (hasEdit);
     chordDirectoryPreviewButton.setEnabled (hasEdit);
@@ -10497,12 +12016,12 @@ void BeatMakerNoRecord::updateButtonsFromState()
     fxScanButton.setEnabled (hasEdit);
     fxScanSkippedButton.setEnabled (hasEdit && skippedPluginScanEntries.size() > 0);
     fxPrepPlaybackButton.setEnabled (hasEdit);
-    fxAddSamplerButton.setEnabled (hasTrack);
-    fxAddSynthButton.setEnabled (hasTrack);
-    fxAddEQButton.setEnabled (hasTrack);
-    fxAddCompButton.setEnabled (hasTrack);
-    fxAddReverbButton.setEnabled (hasTrack);
-    fxAddDelayButton.setEnabled (hasTrack);
+    fxAddSamplerButton.setEnabled (false);
+    fxAddSynthButton.setEnabled (false);
+    fxAddEQButton.setEnabled (false);
+    fxAddCompButton.setEnabled (false);
+    fxAddReverbButton.setEnabled (false);
+    fxAddDelayButton.setEnabled (false);
     fxAddExternalInstrumentButton.setEnabled (hasTrack);
     fxAddExternalButton.setEnabled (hasTrack);
     fxOpenEditorButton.setEnabled (hasSelectedFx);
@@ -10521,91 +12040,112 @@ void BeatMakerNoRecord::updateButtonsFromState()
     commandToolbar.setVisible (true);
     timelineRuler.setVisible (editComponent != nullptr);
     trackAreaToolbar.setVisible (editComponent != nullptr);
-    mixerToolsToolbar.setVisible (editComponent != nullptr);
-    mixerArea.setVisible (editComponent != nullptr);
+    mixerToolsToolbar.setVisible (editComponent != nullptr && windowPanelMixerAreaVisible);
+    mixerArea.setVisible (editComponent != nullptr && windowPanelMixerAreaVisible);
     mixerArea.setEnabled (hasEdit);
-    channelRackGroup.setVisible (editComponent != nullptr);
-    inspectorGroup.setVisible (editComponent != nullptr);
-    builtInSynthGroup.setVisible (editComponent != nullptr);
-    channelRackTrackLabel.setVisible (editComponent != nullptr);
-    channelRackTrackBox.setVisible (editComponent != nullptr);
-    channelRackPluginLabel.setVisible (editComponent != nullptr);
-    channelRackPluginBox.setVisible (editComponent != nullptr);
-    channelRackAddInstrumentButton.setVisible (editComponent != nullptr);
-    channelRackAddFxButton.setVisible (editComponent != nullptr);
-    channelRackOpenPluginButton.setVisible (editComponent != nullptr);
-    inspectorTrackNameLabel.setVisible (editComponent != nullptr);
-    inspectorRouteLabel.setVisible (editComponent != nullptr);
-    inspectorPluginLabel.setVisible (editComponent != nullptr);
-    inspectorMeterLabel.setVisible (editComponent != nullptr);
-    builtInSynthTargetLabel.setVisible (editComponent != nullptr);
-    builtInSynthPresetInitButton.setVisible (editComponent != nullptr);
-    builtInSynthPresetWarmPadButton.setVisible (editComponent != nullptr);
-    builtInSynthPresetPunchBassButton.setVisible (editComponent != nullptr);
-    builtInSynthPresetBrightPluckButton.setVisible (editComponent != nullptr);
-    builtInSynthCutoffLabel.setVisible (editComponent != nullptr);
-    builtInSynthCutoffSlider.setVisible (editComponent != nullptr);
-    builtInSynthResonanceLabel.setVisible (editComponent != nullptr);
-    builtInSynthResonanceSlider.setVisible (editComponent != nullptr);
-    builtInSynthEnvLabel.setVisible (editComponent != nullptr);
-    builtInSynthEnvSlider.setVisible (editComponent != nullptr);
-    builtInSynthDriveLabel.setVisible (editComponent != nullptr);
-    builtInSynthDriveSlider.setVisible (editComponent != nullptr);
-    builtInSynthAttackLabel.setVisible (editComponent != nullptr);
-    builtInSynthAttackSlider.setVisible (editComponent != nullptr);
-    builtInSynthReleaseLabel.setVisible (editComponent != nullptr);
-    builtInSynthReleaseSlider.setVisible (editComponent != nullptr);
-    builtInSynthReverbLabel.setVisible (editComponent != nullptr);
-    builtInSynthReverbSlider.setVisible (editComponent != nullptr);
-    builtInSynthDelayLabel.setVisible (editComponent != nullptr);
-    builtInSynthDelaySlider.setVisible (editComponent != nullptr);
-    builtInSynthOsc1Label.setVisible (editComponent != nullptr);
-    builtInSynthOsc1Slider.setVisible (editComponent != nullptr);
-    builtInSynthOsc2Label.setVisible (editComponent != nullptr);
-    builtInSynthOsc2Slider.setVisible (editComponent != nullptr);
-    builtInSynthOsc3Label.setVisible (editComponent != nullptr);
-    builtInSynthOsc3Slider.setVisible (editComponent != nullptr);
-    builtInSynthOsc4Label.setVisible (editComponent != nullptr);
-    builtInSynthOsc4Slider.setVisible (editComponent != nullptr);
-    builtInSynthUnisonLabel.setVisible (editComponent != nullptr);
-    builtInSynthUnisonSlider.setVisible (editComponent != nullptr);
-    builtInSynthWidthLabel.setVisible (editComponent != nullptr);
-    builtInSynthWidthSlider.setVisible (editComponent != nullptr);
-    builtInSynthChorusLabel.setVisible (editComponent != nullptr);
-    builtInSynthChorusSlider.setVisible (editComponent != nullptr);
-    builtInSynthMasterLabel.setVisible (editComponent != nullptr);
-    builtInSynthMasterSlider.setVisible (editComponent != nullptr);
-    channelRackTrackBox.setEnabled (hasTrack);
-    channelRackPluginBox.setEnabled (hasTrack && channelRackPluginBox.getNumItems() > 0);
-    channelRackAddInstrumentButton.setEnabled (hasTrack);
-    channelRackAddFxButton.setEnabled (hasTrack);
-    channelRackOpenPluginButton.setEnabled (hasSelectedFx);
-    builtInSynthTargetLabel.setEnabled (hasBuiltInSynth);
-    builtInSynthPresetInitButton.setEnabled (hasBuiltInSynth);
-    builtInSynthPresetWarmPadButton.setEnabled (hasBuiltInSynth);
-    builtInSynthPresetPunchBassButton.setEnabled (hasBuiltInSynth);
-    builtInSynthPresetBrightPluckButton.setEnabled (hasBuiltInSynth);
-    builtInSynthCutoffSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthResonanceSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthEnvSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthDriveSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthAttackSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthReleaseSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthReverbSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthDelaySlider.setEnabled (hasBuiltInSynth);
-    builtInSynthOsc1Slider.setEnabled (hasBuiltInSynth);
-    builtInSynthOsc2Slider.setEnabled (hasBuiltInSynth);
-    builtInSynthOsc3Slider.setEnabled (hasBuiltInSynth);
-    builtInSynthOsc4Slider.setEnabled (hasBuiltInSynth);
-    builtInSynthUnisonSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthWidthSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthChorusSlider.setEnabled (hasBuiltInSynth);
-    builtInSynthMasterSlider.setEnabled (hasBuiltInSynth);
+    mixerRackSplitter.setVisible (editComponent != nullptr
+                                  && windowPanelMixerAreaVisible
+                                  && (windowPanelChannelRackVisible || windowPanelInspectorVisible));
+    rackInspectorSplitter.setVisible (editComponent != nullptr
+                                      && windowPanelChannelRackVisible
+                                      && windowPanelInspectorVisible);
+    channelRackControlsSplitter.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    channelRackGroup.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    channelRackPreview.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    inspectorGroup.setVisible (editComponent != nullptr && windowPanelInspectorVisible);
+    builtInSynthGroup.setVisible (false);
+    channelRackTrackLabel.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    channelRackTrackBox.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    channelRackPluginLabel.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    channelRackPluginBox.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    channelRackAddInstrumentButton.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    channelRackAddFxButton.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    channelRackOpenPluginButton.setVisible (editComponent != nullptr && windowPanelChannelRackVisible);
+    inspectorTrackNameLabel.setVisible (editComponent != nullptr && windowPanelInspectorVisible);
+    inspectorRouteLabel.setVisible (editComponent != nullptr && windowPanelInspectorVisible);
+    inspectorPluginLabel.setVisible (editComponent != nullptr && windowPanelInspectorVisible);
+    inspectorMeterLabel.setVisible (editComponent != nullptr && windowPanelInspectorVisible);
+    builtInSynthTargetLabel.setVisible (false);
+    builtInSynthPresetInitButton.setVisible (false);
+    builtInSynthPresetWarmPadButton.setVisible (false);
+    builtInSynthPresetPunchBassButton.setVisible (false);
+    builtInSynthPresetBrightPluckButton.setVisible (false);
+    builtInSynthCutoffLabel.setVisible (false);
+    builtInSynthCutoffSlider.setVisible (false);
+    builtInSynthResonanceLabel.setVisible (false);
+    builtInSynthResonanceSlider.setVisible (false);
+    builtInSynthEnvLabel.setVisible (false);
+    builtInSynthEnvSlider.setVisible (false);
+    builtInSynthDriveLabel.setVisible (false);
+    builtInSynthDriveSlider.setVisible (false);
+    builtInSynthAttackLabel.setVisible (false);
+    builtInSynthAttackSlider.setVisible (false);
+    builtInSynthReleaseLabel.setVisible (false);
+    builtInSynthReleaseSlider.setVisible (false);
+    builtInSynthReverbLabel.setVisible (false);
+    builtInSynthReverbSlider.setVisible (false);
+    builtInSynthDelayLabel.setVisible (false);
+    builtInSynthDelaySlider.setVisible (false);
+    builtInSynthOsc1Label.setVisible (false);
+    builtInSynthOsc1Slider.setVisible (false);
+    builtInSynthOsc2Label.setVisible (false);
+    builtInSynthOsc2Slider.setVisible (false);
+    builtInSynthOsc3Label.setVisible (false);
+    builtInSynthOsc3Slider.setVisible (false);
+    builtInSynthOsc4Label.setVisible (false);
+    builtInSynthOsc4Slider.setVisible (false);
+    builtInSynthUnisonLabel.setVisible (false);
+    builtInSynthUnisonSlider.setVisible (false);
+    builtInSynthWidthLabel.setVisible (false);
+    builtInSynthWidthSlider.setVisible (false);
+    builtInSynthChorusLabel.setVisible (false);
+    builtInSynthChorusSlider.setVisible (false);
+    builtInSynthMasterLabel.setVisible (false);
+    builtInSynthMasterSlider.setVisible (false);
+    channelRackTrackBox.setEnabled (windowPanelChannelRackVisible && hasTrack);
+    channelRackPluginBox.setEnabled (windowPanelChannelRackVisible && hasTrack && channelRackPluginBox.getNumItems() > 0);
+    channelRackAddInstrumentButton.setEnabled (windowPanelChannelRackVisible && hasTrack);
+    channelRackAddFxButton.setEnabled (windowPanelChannelRackVisible && hasTrack);
+    channelRackOpenPluginButton.setEnabled (windowPanelChannelRackVisible && hasSelectedFx);
+    channelRackPreview.setEnabled (windowPanelChannelRackVisible && hasEdit);
+    mixerRackSplitter.setEnabled (hasEdit
+                                  && windowPanelMixerAreaVisible
+                                  && (windowPanelChannelRackVisible || windowPanelInspectorVisible));
+    rackInspectorSplitter.setEnabled (hasEdit && windowPanelChannelRackVisible && windowPanelInspectorVisible);
+    channelRackControlsSplitter.setEnabled (hasEdit && windowPanelChannelRackVisible);
+    builtInSynthTargetLabel.setEnabled (false);
+    builtInSynthPresetInitButton.setEnabled (false);
+    builtInSynthPresetWarmPadButton.setEnabled (false);
+    builtInSynthPresetPunchBassButton.setEnabled (false);
+    builtInSynthPresetBrightPluckButton.setEnabled (false);
+    builtInSynthCutoffSlider.setEnabled (false);
+    builtInSynthResonanceSlider.setEnabled (false);
+    builtInSynthEnvSlider.setEnabled (false);
+    builtInSynthDriveSlider.setEnabled (false);
+    builtInSynthAttackSlider.setEnabled (false);
+    builtInSynthReleaseSlider.setEnabled (false);
+    builtInSynthReverbSlider.setEnabled (false);
+    builtInSynthDelaySlider.setEnabled (false);
+    builtInSynthOsc1Slider.setEnabled (false);
+    builtInSynthOsc2Slider.setEnabled (false);
+    builtInSynthOsc3Slider.setEnabled (false);
+    builtInSynthOsc4Slider.setEnabled (false);
+    builtInSynthUnisonSlider.setEnabled (false);
+    builtInSynthWidthSlider.setEnabled (false);
+    builtInSynthChorusSlider.setEnabled (false);
+    builtInSynthMasterSlider.setEnabled (false);
     const auto pianoEditorMode = getPianoEditorLayoutModeSelection();
     const bool hasPianoEditor = (editComponent != nullptr);
-    const bool showStepEditor = hasPianoEditor && pianoEditorMode != PianoEditorLayoutMode::pianoRoll;
-    const bool showPianoEditor = hasPianoEditor && pianoEditorMode != PianoEditorLayoutMode::stepSequencer;
-    const bool showSplitEditorDivider = hasPianoEditor && pianoEditorMode == PianoEditorLayoutMode::split;
+    const bool showStepEditor = hasPianoEditor
+                                && windowPanelStepSequencerVisible
+                                && pianoEditorMode != PianoEditorLayoutMode::pianoRoll;
+    const bool showPianoEditor = hasPianoEditor
+                                 && windowPanelPianoRollVisible
+                                 && pianoEditorMode != PianoEditorLayoutMode::stepSequencer;
+    const bool showSplitEditorDivider = hasPianoEditor
+                                        && windowPanelPianoRollVisible
+                                        && windowPanelStepSequencerVisible
+                                        && pianoEditorMode == PianoEditorLayoutMode::split;
     stepSequencerGroup.setVisible (showStepEditor);
     pianoRollGroup.setVisible (showPianoEditor);
     pianoStepSplitter.setVisible (showSplitEditorDivider);
