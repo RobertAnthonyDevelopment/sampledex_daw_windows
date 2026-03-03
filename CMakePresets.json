@@ -19,7 +19,8 @@
         "CMAKE_POLICY_DEFAULT_CMP0091": "NEW",
         "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
         "SAMPLEXDEX_WINDOWS_BUILD": "ON",
-        "BUILD_TESTING": "ON"
+        "BUILD_TESTING": "ON",
+        "FETCHCONTENT_UPDATES_DISCONNECTED": "ON"
       }
     }
   ],

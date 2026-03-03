@@ -12,8 +12,12 @@ if(NOT TARGET juce::juce_core)
         add_subdirectory("${LOCAL_JUCE_ROOT}" "${CMAKE_BINARY_DIR}/juce_local_build")
     else()
         message(STATUS "Local JUCE source is incomplete or missing CMake helpers; fetching JUCE via CPM.")
+        if(DEFINED ENV{CI})
+            # Avoid flaky "git update" calls on CI once JUCE has been cloned.
+            set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "Disable FetchContent updates on CI" FORCE)
+        endif()
         include("${TRACKTION_ROOT}/cmake/CPM.cmake")
-        CPMAddPackage("gh:juce-framework/JUCE#develop")
+        CPMAddPackage("gh:juce-framework/JUCE#8.0.12")
     endif()
 endif()
 

@@ -24,7 +24,26 @@ jobs:
           submodules: recursive
 
       - name: Configure (Windows preset)
-        run: cmake --preset windows-vs2022
+        shell: pwsh
+        run: |
+          $maxAttempts = 3
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            Write-Host "CMake configure attempt $attempt of $maxAttempts"
+            cmake --preset windows-vs2022
+            if ($LASTEXITCODE -eq 0) {
+              break
+            }
+
+            if ($attempt -eq $maxAttempts) {
+              throw "CMake configure failed after $maxAttempts attempts."
+            }
+
+            Write-Host "Configure failed; clearing build/windows-vs2022 before retry..."
+            if (Test-Path "build/windows-vs2022") {
+              Remove-Item -Path "build/windows-vs2022" -Recurse -Force
+            }
+            Start-Sleep -Seconds (15 * $attempt)
+          }
 
       - name: Build app + UI regression tests
         run: cmake --build --preset windows-vs2022-release --config ${{ inputs.build_type }}
