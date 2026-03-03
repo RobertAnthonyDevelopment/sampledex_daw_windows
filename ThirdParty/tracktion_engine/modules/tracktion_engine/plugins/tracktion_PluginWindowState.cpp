@@ -247,8 +247,16 @@ juce::Point<int> PluginWindowState::choosePositionForPluginWindow()
             if (p->isFocused())
                 return p->getBounds().getPosition() + juce::Point<int> (80, 80);
 
-    return juce::Desktop::getInstance().getDisplays()
-            .getPrimaryDisplay()->userBounds.getRelativePoint (0.2f, 0.2f).roundToInt();
+    if (auto* primaryDisplay = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+    {
+       #if JUCE_MAJOR_VERSION >= 8
+        return primaryDisplay->userBounds.getRelativePoint (0.2f, 0.2f).roundToInt();
+       #else
+        return primaryDisplay->userArea.getRelativePoint (0.2f, 0.2f);
+       #endif
+    }
+
+    return { 80, 80 };
 }
 
 }} // namespace tracktion { inline namespace engine
