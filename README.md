@@ -1,5 +1,9 @@
 # Sampledex DAW (Windows Prototype)
 
+![Made with Codex](https://img.shields.io/badge/Made%20with-Codex-0A7CFF?style=flat-square)
+![Built with JUCE](https://img.shields.io/badge/Built%20with-JUCE-8A2BE2?style=flat-square)
+![Powered by Tracktion Engine](https://img.shields.io/badge/Powered%20by-Tracktion%20Engine-2F8D46?style=flat-square)
+
 This repository is an active prototype, not a finished DAW release.
 
 ## Current Status
