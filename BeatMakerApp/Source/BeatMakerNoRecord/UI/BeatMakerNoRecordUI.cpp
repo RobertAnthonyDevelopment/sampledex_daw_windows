@@ -431,6 +431,15 @@ struct PianoRollToolbarItemDefinition
     enum class IconGlyph
     {
         none,
+        fileNew,
+        fileOpen,
+        fileSave,
+        undo,
+        redo,
+        play,
+        stop,
+        returnToStart,
+        loop,
         select,
         pencil,
         scissors,
@@ -452,6 +461,16 @@ struct PianoRollToolbarItemDefinition
         generateBass,
         generateDrums,
         focus,
+        center,
+        fit,
+        marker,
+        section,
+        refresh,
+        pluginOpen,
+        pluginScan,
+        bypass,
+        mute,
+        solo,
         reset,
         zoomTimeIn,
         zoomTimeOut,
@@ -468,6 +487,118 @@ struct PianoRollToolbarItemDefinition
     std::function<bool()> isEnabled;
     std::function<bool()> isToggled;
 };
+
+PianoRollToolbarItemDefinition::IconGlyph getToolbarIconGlyphForItem (int itemId)
+{
+    using Icon = PianoRollToolbarItemDefinition::IconGlyph;
+
+    switch (itemId)
+    {
+        case commandToolbarNewProject: return Icon::fileNew;
+        case commandToolbarOpenProject: return Icon::fileOpen;
+        case commandToolbarSaveProject: return Icon::fileSave;
+        case commandToolbarUndo: return Icon::undo;
+        case commandToolbarRedo: return Icon::redo;
+        case commandToolbarPlayPause: return Icon::play;
+        case commandToolbarStop: return Icon::stop;
+        case commandToolbarReturnStart: return Icon::returnToStart;
+        case commandToolbarLoopToggle: return Icon::loop;
+        case commandToolbarAddTrack: return Icon::generateBass;
+        case commandToolbarAddMidiTrack: return Icon::generateChords;
+        case commandToolbarImportAudio: return Icon::fileOpen;
+        case commandToolbarImportMidi: return Icon::paste;
+        case commandToolbarCreateMidiClip: return Icon::quantize;
+        case commandToolbarToolSelect: return Icon::select;
+        case commandToolbarToolPencil: return Icon::pencil;
+        case commandToolbarToolScissors: return Icon::scissors;
+        case commandToolbarToolResize: return Icon::resize;
+        case commandToolbarSplitClip: return Icon::scissors;
+        case commandToolbarDuplicateClip: return Icon::copy;
+        case commandToolbarDeleteSelection: return Icon::remove;
+        case commandToolbarFocusSelection: return Icon::focus;
+        case commandToolbarCenterPlayhead: return Icon::center;
+        case commandToolbarFitProject: return Icon::fit;
+
+        case trackAreaToolbarToolSelect: return Icon::select;
+        case trackAreaToolbarToolPencil: return Icon::pencil;
+        case trackAreaToolbarToolScissors: return Icon::scissors;
+        case trackAreaToolbarToolResize: return Icon::resize;
+        case trackAreaToolbarSplit: return Icon::scissors;
+        case trackAreaToolbarDuplicate: return Icon::copy;
+        case trackAreaToolbarCopy: return Icon::copy;
+        case trackAreaToolbarCut: return Icon::cut;
+        case trackAreaToolbarPaste: return Icon::paste;
+        case trackAreaToolbarDelete: return Icon::remove;
+        case trackAreaToolbarZoomIn: return Icon::zoomTimeIn;
+        case trackAreaToolbarZoomOut: return Icon::zoomTimeOut;
+        case trackAreaToolbarZoomReset: return Icon::reset;
+        case trackAreaToolbarFocusSelection: return Icon::focus;
+        case trackAreaToolbarCenterPlayhead: return Icon::center;
+        case trackAreaToolbarFitProject: return Icon::fit;
+        case trackAreaToolbarSetLoopSelection: return Icon::loop;
+        case trackAreaToolbarAddMarker: return Icon::marker;
+        case trackAreaToolbarPrevMarker: return Icon::marker;
+        case trackAreaToolbarNextMarker: return Icon::marker;
+        case trackAreaToolbarAddSection: return Icon::section;
+        case trackAreaToolbarPrevSection: return Icon::section;
+        case trackAreaToolbarNextSection: return Icon::section;
+        case trackAreaToolbarAddTrack: return Icon::generateBass;
+        case trackAreaToolbarAddMidiTrack: return Icon::generateChords;
+
+        case mixerToolbarMute: return Icon::mute;
+        case mixerToolbarSolo: return Icon::solo;
+        case mixerToolbarTrackAdd: return Icon::generateBass;
+        case mixerToolbarTrackAddMidi: return Icon::generateChords;
+        case mixerToolbarFxRefresh: return Icon::refresh;
+        case mixerToolbarFxOpen: return Icon::pluginOpen;
+        case mixerToolbarFxScan: return Icon::pluginScan;
+        case mixerToolbarFxPrep: return Icon::refresh;
+        case mixerToolbarFxAddInstrument: return Icon::generateChords;
+        case mixerToolbarFxAddExternal: return Icon::generateDrums;
+        case mixerToolbarFxMoveUp: return Icon::transposeUp;
+        case mixerToolbarFxMoveDown: return Icon::transposeDown;
+        case mixerToolbarFxBypass: return Icon::bypass;
+        case mixerToolbarFxDelete: return Icon::remove;
+
+        case pianoRollToolbarToolSelect: return Icon::select;
+        case pianoRollToolbarToolPencil: return Icon::pencil;
+        case pianoRollToolbarToolScissors: return Icon::scissors;
+        case pianoRollToolbarToolResize: return Icon::resize;
+        case pianoRollToolbarQuantize: return Icon::quantize;
+        case pianoRollToolbarTransposeDown: return Icon::transposeDown;
+        case pianoRollToolbarTransposeUp: return Icon::transposeUp;
+        case pianoRollToolbarVelocityDown: return Icon::velocityDown;
+        case pianoRollToolbarVelocityUp: return Icon::velocityUp;
+        case pianoRollToolbarHumanizeTiming: return Icon::humanizeTiming;
+        case pianoRollToolbarHumanizeVelocity: return Icon::humanizeVelocity;
+        case pianoRollToolbarLegato: return Icon::legato;
+        case pianoRollToolbarCopy: return Icon::copy;
+        case pianoRollToolbarCut: return Icon::cut;
+        case pianoRollToolbarPaste: return Icon::paste;
+        case pianoRollToolbarDelete: return Icon::remove;
+        case pianoRollToolbarGenerateChords: return Icon::generateChords;
+        case pianoRollToolbarGenerateArp: return Icon::generateArp;
+        case pianoRollToolbarGenerateBass: return Icon::generateBass;
+        case pianoRollToolbarGenerateDrums: return Icon::generateDrums;
+        case pianoRollToolbarFocus: return Icon::focus;
+        case pianoRollToolbarResetView: return Icon::reset;
+        case pianoRollToolbarZoomTimeIn: return Icon::zoomTimeIn;
+        case pianoRollToolbarZoomTimeOut: return Icon::zoomTimeOut;
+        case pianoRollToolbarZoomPitchIn: return Icon::zoomPitchIn;
+        case pianoRollToolbarZoomPitchOut: return Icon::zoomPitchOut;
+
+        case stepSequencerToolbarCreateMidi: return Icon::quantize;
+        case stepSequencerToolbarClearPage: return Icon::remove;
+        case stepSequencerToolbarPatternFourOnFloor: return Icon::generateDrums;
+        case stepSequencerToolbarRandomizePage: return Icon::humanizeVelocity;
+        case stepSequencerToolbarShiftLeft: return Icon::transposeDown;
+        case stepSequencerToolbarShiftRight: return Icon::transposeUp;
+        case stepSequencerToolbarVaryVelocity: return Icon::velocityUp;
+        case stepSequencerToolbarQuantize: return Icon::quantize;
+        case stepSequencerToolbarGenerateDrums: return Icon::generateDrums;
+        default: return Icon::none;
+    }
+}
 
 class ToolbarIconButton final : public juce::Button
 {
@@ -542,6 +673,92 @@ private:
 
         switch (icon)
         {
+            case PianoRollToolbarItemDefinition::IconGlyph::fileNew:
+            {
+                g.drawRect (juce::Rectangle<float> (b.getX() + 1.8f, b.getY() + 1.8f, b.getWidth() - 4.0f, b.getHeight() - 3.6f), 1.4f);
+                drawPlus (g, { b.getCentreX(), b.getCentreY() }, 2.1f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::fileOpen:
+            {
+                juce::Path p;
+                p.startNewSubPath (b.getX() + 1.2f, b.getBottom() - 2.2f);
+                p.lineTo (b.getX() + 2.8f, b.getY() + 3.0f);
+                p.lineTo (b.getX() + b.getWidth() * 0.45f, b.getY() + 3.0f);
+                p.lineTo (b.getX() + b.getWidth() * 0.56f, b.getY() + 1.8f);
+                p.lineTo (b.getRight() - 1.2f, b.getY() + 1.8f);
+                p.lineTo (b.getRight() - 2.8f, b.getBottom() - 2.2f);
+                p.closeSubPath();
+                g.strokePath (p, juce::PathStrokeType (1.4f));
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::fileSave:
+            {
+                g.drawRoundedRectangle (juce::Rectangle<float> (b.getX() + 1.2f, b.getY() + 1.2f, b.getWidth() - 2.4f, b.getHeight() - 2.4f), 1.8f, 1.4f);
+                g.drawRect (juce::Rectangle<float> (b.getX() + 3.0f, b.getY() + 2.4f, b.getWidth() - 6.0f, b.getHeight() * 0.28f), 1.2f);
+                g.fillRect (juce::Rectangle<float> (b.getX() + b.getWidth() * 0.58f, b.getY() + 2.8f, 1.8f, b.getHeight() * 0.20f));
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::undo:
+            {
+                juce::Path p;
+                p.startNewSubPath (b.getRight() - 1.6f, b.getY() + b.getHeight() * 0.34f);
+                p.cubicTo (b.getX() + b.getWidth() * 0.58f, b.getY() + b.getHeight() * 0.34f,
+                           b.getX() + b.getWidth() * 0.44f, b.getBottom() - 2.0f,
+                           b.getX() + b.getWidth() * 0.18f, b.getBottom() - 2.0f);
+                g.strokePath (p, juce::PathStrokeType (1.5f));
+                drawArrow (g, { b.getX() + b.getWidth() * 0.34f, b.getY() + b.getHeight() * 0.36f },
+                           { b.getX() + 1.6f, b.getY() + b.getHeight() * 0.36f }, 1.4f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::redo:
+            {
+                juce::Path p;
+                p.startNewSubPath (b.getX() + 1.6f, b.getY() + b.getHeight() * 0.34f);
+                p.cubicTo (b.getX() + b.getWidth() * 0.42f, b.getY() + b.getHeight() * 0.34f,
+                           b.getX() + b.getWidth() * 0.56f, b.getBottom() - 2.0f,
+                           b.getX() + b.getWidth() * 0.82f, b.getBottom() - 2.0f);
+                g.strokePath (p, juce::PathStrokeType (1.5f));
+                drawArrow (g, { b.getX() + b.getWidth() * 0.66f, b.getY() + b.getHeight() * 0.36f },
+                           { b.getRight() - 1.6f, b.getY() + b.getHeight() * 0.36f }, 1.4f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::play:
+            {
+                juce::Path p;
+                p.startNewSubPath (b.getX() + 2.2f, b.getY() + 1.8f);
+                p.lineTo (b.getRight() - 2.0f, b.getCentreY());
+                p.lineTo (b.getX() + 2.2f, b.getBottom() - 1.8f);
+                p.closeSubPath();
+                g.fillPath (p);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::stop:
+            {
+                g.fillRect (juce::Rectangle<float> (b.getX() + 2.2f, b.getY() + 2.2f, b.getWidth() - 4.4f, b.getHeight() - 4.4f));
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::returnToStart:
+            {
+                g.drawLine (b.getX() + 2.0f, b.getY() + 1.6f, b.getX() + 2.0f, b.getBottom() - 1.6f, 1.6f);
+                juce::Path p;
+                p.startNewSubPath (b.getRight() - 2.0f, b.getY() + 1.8f);
+                p.lineTo (b.getX() + 4.0f, b.getCentreY());
+                p.lineTo (b.getRight() - 2.0f, b.getBottom() - 1.8f);
+                p.closeSubPath();
+                g.fillPath (p);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::loop:
+            {
+                juce::Path p;
+                p.addCentredArc (b.getCentreX(), b.getCentreY(), b.getWidth() * 0.35f, b.getHeight() * 0.33f, 0.0f,
+                                 juce::MathConstants<float>::pi * 0.12f,
+                                 juce::MathConstants<float>::pi * 1.84f, true);
+                g.strokePath (p, juce::PathStrokeType (1.5f));
+                drawArrow (g, { b.getRight() - 3.4f, b.getY() + 3.0f }, { b.getRight() - 1.4f, b.getY() + 1.5f }, 1.3f);
+                break;
+            }
             case PianoRollToolbarItemDefinition::IconGlyph::select:
             {
                 juce::Path p;
@@ -703,6 +920,83 @@ private:
                 g.drawLine (b.getRight() - 1.0f, b.getCentreY(), b.getRight() - 3.4f, b.getCentreY(), 1.4f);
                 break;
             }
+            case PianoRollToolbarItemDefinition::IconGlyph::center:
+            {
+                g.drawEllipse (juce::Rectangle<float> (b.getCentreX() - 3.4f, b.getCentreY() - 3.4f, 6.8f, 6.8f), 1.4f);
+                g.drawLine (b.getCentreX(), b.getY() + 1.0f, b.getCentreX(), b.getBottom() - 1.0f, 1.2f);
+                g.drawLine (b.getX() + 1.0f, b.getCentreY(), b.getRight() - 1.0f, b.getCentreY(), 1.2f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::fit:
+            {
+                g.drawRect (juce::Rectangle<float> (b.getX() + 1.6f, b.getY() + 1.6f, b.getWidth() - 3.2f, b.getHeight() - 3.2f), 1.3f);
+                drawArrow (g, { b.getX() + 3.4f, b.getY() + 3.4f }, { b.getX() + 1.6f, b.getY() + 1.6f }, 1.2f);
+                drawArrow (g, { b.getRight() - 3.4f, b.getBottom() - 3.4f }, { b.getRight() - 1.6f, b.getBottom() - 1.6f }, 1.2f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::marker:
+            {
+                juce::Path p;
+                p.startNewSubPath (b.getX() + 2.0f, b.getY() + 1.6f);
+                p.lineTo (b.getX() + 2.0f, b.getBottom() - 1.6f);
+                p.lineTo (b.getRight() - 2.0f, b.getCentreY());
+                p.closeSubPath();
+                g.strokePath (p, juce::PathStrokeType (1.4f));
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::section:
+            {
+                g.drawRoundedRectangle (juce::Rectangle<float> (b.getX() + 1.6f, b.getY() + 3.0f, b.getWidth() - 3.2f, b.getHeight() - 6.0f), 2.0f, 1.4f);
+                g.drawLine (b.getX() + b.getWidth() * 0.5f, b.getY() + 3.0f, b.getX() + b.getWidth() * 0.5f, b.getBottom() - 3.0f, 1.2f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::refresh:
+            {
+                juce::Path p;
+                p.addCentredArc (b.getCentreX(), b.getCentreY(), b.getWidth() * 0.34f, b.getHeight() * 0.34f, 0.0f,
+                                 juce::MathConstants<float>::pi * 0.23f,
+                                 juce::MathConstants<float>::pi * 1.88f, true);
+                g.strokePath (p, juce::PathStrokeType (1.4f));
+                drawArrow (g, { b.getRight() - 3.4f, b.getY() + 3.8f }, { b.getRight() - 1.8f, b.getY() + 2.2f }, 1.2f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::pluginOpen:
+            {
+                g.drawRoundedRectangle (juce::Rectangle<float> (b.getX() + 1.6f, b.getY() + 2.4f, b.getWidth() - 6.0f, b.getHeight() - 4.2f), 2.0f, 1.3f);
+                drawArrow (g, { b.getX() + b.getWidth() * 0.45f, b.getY() + b.getHeight() * 0.45f },
+                           { b.getRight() - 1.4f, b.getY() + 1.4f }, 1.2f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::pluginScan:
+            {
+                g.drawEllipse (juce::Rectangle<float> (b.getX() + 1.2f, b.getY() + 1.2f, b.getWidth() * 0.56f, b.getHeight() * 0.56f), 1.4f);
+                g.drawLine (b.getCentreX() + 1.6f, b.getCentreY() + 1.6f, b.getRight() - 1.2f, b.getBottom() - 1.2f, 1.4f);
+                g.drawLine (b.getX() + 2.0f, b.getY() + b.getHeight() * 0.30f, b.getRight() - 5.0f, b.getY() + b.getHeight() * 0.30f, 1.2f);
+                g.drawLine (b.getX() + 2.0f, b.getY() + b.getHeight() * 0.45f, b.getRight() - 5.0f, b.getY() + b.getHeight() * 0.45f, 1.2f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::bypass:
+            {
+                g.drawLine (b.getX() + 1.6f, b.getY() + 1.6f, b.getRight() - 1.6f, b.getBottom() - 1.6f, 1.5f);
+                g.drawLine (b.getX() + 1.6f, b.getBottom() - 1.6f, b.getRight() - 1.6f, b.getY() + 1.6f, 1.5f);
+                g.drawRoundedRectangle (juce::Rectangle<float> (b.getX() + 2.2f, b.getY() + 2.2f, b.getWidth() - 4.4f, b.getHeight() - 4.4f), 2.0f, 1.1f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::mute:
+            {
+                g.fillRoundedRectangle (juce::Rectangle<float> (b.getX() + 1.6f, b.getY() + 4.0f, 3.8f, b.getHeight() - 8.0f), 1.0f);
+                g.fillRoundedRectangle (juce::Rectangle<float> (b.getX() + 5.0f, b.getY() + 2.2f, 2.2f, b.getHeight() - 4.4f), 1.0f);
+                g.drawLine (b.getX() + 7.6f, b.getY() + 2.0f, b.getRight() - 1.6f, b.getBottom() - 2.0f, 1.4f);
+                break;
+            }
+            case PianoRollToolbarItemDefinition::IconGlyph::solo:
+            {
+                g.drawRoundedRectangle (juce::Rectangle<float> (b.getX() + 1.8f, b.getY() + 1.8f, b.getWidth() - 3.6f, b.getHeight() - 3.6f), 2.2f, 1.3f);
+                g.setFont (juce::Font (juce::FontOptions (9.4f, juce::Font::bold)));
+                g.drawText ("S", juce::Rectangle<int> (roundToInt (b.getX()), roundToInt (b.getY()), roundToInt (b.getWidth()), roundToInt (b.getHeight())),
+                            juce::Justification::centred, false);
+                break;
+            }
             case PianoRollToolbarItemDefinition::IconGlyph::reset:
             {
                 juce::Path p;
@@ -764,6 +1058,7 @@ public:
 
         addAndMakeVisible (*button);
         button->setWantsKeyboardFocus (false);
+        button->setMouseCursor (juce::MouseCursor::PointingHandCursor);
         button->setClickingTogglesState (definition.isToggleButton);
         button->onClick = [this]
         {
@@ -942,6 +1237,9 @@ enum MenuCommandIds
     menuViewZoomIn,
     menuViewZoomOut,
     menuViewZoomReset,
+    menuViewZoomVerticalIn,
+    menuViewZoomVerticalOut,
+    menuViewZoomVerticalReset,
     menuViewFocusSelection,
     menuViewCenterPlayhead,
     menuViewFitProject,
@@ -978,6 +1276,18 @@ enum MenuCommandIds
     menuWindowPanelInspector,
     menuWindowPanelPianoRoll,
     menuWindowPanelStepSequencer,
+    menuWindowFloatArrangementPanel,
+    menuWindowFloatTracksPanel,
+    menuWindowFloatClipPanel,
+    menuWindowFloatMidiPanel,
+    menuWindowFloatAudioPanel,
+    menuWindowFloatFxPanel,
+    menuWindowFloatTrackMixerPanel,
+    menuWindowFloatMixerAreaPanel,
+    menuWindowFloatChannelRackPanel,
+    menuWindowFloatInspectorPanel,
+    menuWindowFloatPianoRollPanel,
+    menuWindowFloatStepSequencerPanel,
     menuWindowShowAllPanels,
 
     menuHelpShortcuts
@@ -1638,6 +1948,17 @@ void BeatMakerNoRecord::SectionContainer::mouseWheelMove (const juce::MouseEvent
     const auto mods = e.mods;
     const double primaryDelta = std::abs (wheel.deltaX) > std::abs (wheel.deltaY) ? wheel.deltaX : wheel.deltaY;
 
+    if ((mods.isCommandDown() || mods.isCtrlDown()) && mods.isAltDown())
+    {
+        const double strength = juce::jlimit (0.2, 2.0, std::abs (primaryDelta) * 2.4);
+        const double factor = primaryDelta >= 0.0 ? std::pow (1.16, strength) : std::pow (0.86, strength);
+        const double nextHeight = juce::jlimit (owner.trackHeightSlider.getMinimum(),
+                                                owner.trackHeightSlider.getMaximum(),
+                                                owner.trackHeightSlider.getValue() * factor);
+        owner.trackHeightSlider.setValue (nextHeight);
+        return;
+    }
+
     if (mods.isCommandDown() || mods.isCtrlDown())
     {
         const double strength = juce::jlimit (0.2, 2.0, std::abs (primaryDelta) * 2.5);
@@ -1678,6 +1999,75 @@ void BeatMakerNoRecord::FloatingSectionWindow::closeButtonPressed()
 {
     if (onClosePressed)
         onClosePressed();
+}
+
+BeatMakerNoRecord::DetachedPanelContainer::DetachedPanelContainer (BeatMakerNoRecord& ownerToUse,
+                                                                   DetachedPanel panelToUse)
+    : owner (ownerToUse), panel (panelToUse)
+{
+    setOpaque (false);
+}
+
+void BeatMakerNoRecord::DetachedPanelContainer::paint (juce::Graphics& g)
+{
+    auto frame = getLocalBounds().toFloat().reduced (1.0f);
+    if (frame.getWidth() <= 10.0f || frame.getHeight() <= 10.0f)
+        return;
+
+    const auto title = owner.getDetachedPanelFloatingTitle (panel);
+    auto accent = juce::Colour::fromRGB (116, 176, 228);
+    if (panel == DetachedPanel::mixerArea || panel == DetachedPanel::channelRack || panel == DetachedPanel::inspector)
+        accent = juce::Colour::fromRGB (108, 192, 164);
+    else if (panel == DetachedPanel::pianoRoll || panel == DetachedPanel::stepSequencer)
+        accent = juce::Colour::fromRGB (235, 174, 97);
+
+    g.setColour (juce::Colours::black.withAlpha (0.30f));
+    g.fillRoundedRectangle (frame.translated (0.0f, 2.0f), 11.0f);
+
+    juce::ColourGradient fill (juce::Colour::fromRGB (20, 28, 39).withAlpha (0.88f),
+                               frame.getX(), frame.getY(),
+                               juce::Colour::fromRGB (13, 18, 27).withAlpha (0.84f),
+                               frame.getX(), frame.getBottom(), false);
+    g.setGradientFill (fill);
+    g.fillRoundedRectangle (frame, 11.0f);
+
+    g.setColour (juce::Colours::white.withAlpha (0.08f));
+    g.drawRoundedRectangle (frame, 11.0f, 1.0f);
+
+    auto accentStrip = frame.removeFromTop (2.0f).reduced (14.0f, 0.0f);
+    juce::ColourGradient accentFill (accent.withAlpha (0.74f), accentStrip.getX(), accentStrip.getY(),
+                                     accent.withAlpha (0.0f), accentStrip.getRight(), accentStrip.getY(), false);
+    g.setGradientFill (accentFill);
+    g.fillRoundedRectangle (accentStrip, 1.0f);
+
+    const float maxBadgeWidth = juce::jmax (36.0f, frame.getWidth() - 18.0f);
+    const float badgeWidth = juce::jmin (juce::jmax (116.0f, frame.getWidth() * 0.42f), maxBadgeWidth);
+    if (badgeWidth > 30.0f)
+    {
+        auto badge = juce::Rectangle<float> (frame.getX() + 12.0f,
+                                             frame.getY() + 8.0f,
+                                             badgeWidth,
+                                             19.0f);
+        g.setColour (juce::Colour::fromRGB (15, 22, 33).withAlpha (0.88f));
+        g.fillRoundedRectangle (badge, 5.5f);
+        g.setColour (accent.withAlpha (0.66f));
+        g.drawRoundedRectangle (badge, 5.5f, 1.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.88f));
+        g.setFont (juce::Font (juce::FontOptions (10.3f, juce::Font::bold)));
+        g.drawFittedText (title, badge.toNearestInt().reduced (8, 0), juce::Justification::centredLeft, 1);
+    }
+}
+
+void BeatMakerNoRecord::DetachedPanelContainer::resized()
+{
+    owner.layoutDetachedPanelContent (panel, getLocalBounds());
+}
+
+void BeatMakerNoRecord::DetachedPanelContainer::mouseWheelMove (const juce::MouseEvent& e,
+                                                                const juce::MouseWheelDetails& wheel)
+{
+    juce::ignoreUnused (e, wheel);
+    juce::Component::mouseWheelMove (e, wheel);
 }
 
 BeatMakerNoRecord::LayoutSplitter::LayoutSplitter (bool isVerticalToUse)
@@ -2431,9 +2821,9 @@ void BeatMakerNoRecord::resized()
         }
 
         const int gapX = row.getWidth() < 460 ? 4 : 6;
-        int minButtonWidth = denseLayout ? 58 : 68;
+        int minButtonWidth = denseLayout ? 52 : 60;
         if (densityMode == UiDensityMode::compact)
-            minButtonWidth = juce::jmax (50, minButtonWidth - 8);
+            minButtonWidth = juce::jmax (42, minButtonWidth - 10);
         else if (densityMode == UiDensityMode::accessible)
             minButtonWidth += 16;
 
@@ -2508,9 +2898,9 @@ void BeatMakerNoRecord::resized()
             return defaultRowHeight;
 
         const int gap = availableWidth < 460 ? 4 : 6;
-        int minButtonWidth = denseLayout ? 58 : 68;
+        int minButtonWidth = denseLayout ? 52 : 60;
         if (densityMode == UiDensityMode::compact)
-            minButtonWidth = juce::jmax (50, minButtonWidth - 8);
+            minButtonWidth = juce::jmax (42, minButtonWidth - 10);
         else if (densityMode == UiDensityMode::accessible)
             minButtonWidth += 16;
 
@@ -2577,7 +2967,7 @@ void BeatMakerNoRecord::resized()
     const int menuBarHeight = densityMode == UiDensityMode::accessible ? 34 : (denseLayout ? 28 : 32);
     auto menuBarArea = bounds.removeFromTop (menuBarHeight);
     topMenuBar.setBounds (menuBarArea.reduced (1, 2));
-    const int commandToolbarHeight = densityMode == UiDensityMode::accessible ? 32 : (denseLayout ? 27 : 30);
+    const int commandToolbarHeight = densityMode == UiDensityMode::accessible ? 30 : (denseLayout ? 24 : 26);
     auto commandToolbarArea = bounds.removeFromTop (commandToolbarHeight);
     commandToolbar.setBounds (commandToolbarArea.reduced (1, 1));
     bounds.removeFromTop (densityMode == UiDensityMode::accessible ? 10 : (denseLayout ? 6 : 8));
@@ -2680,13 +3070,30 @@ void BeatMakerNoRecord::resized()
     const bool showEditingPanelSet = panelMode == LeftDockPanelMode::all || panelMode == LeftDockPanelMode::editing;
     const bool showSoundPanelSet = panelMode == LeftDockPanelMode::all || panelMode == LeftDockPanelMode::sound;
 
-    const bool showArrangementPanel = windowPanelArrangementVisible && showProjectPanelSet;
-    const bool showTrackPanel = windowPanelTrackVisible && showProjectPanelSet;
-    const bool showClipTools = windowPanelClipVisible && clipEditGroup.isVisible() && showEditingPanelSet;
-    const bool showMidiTools = windowPanelMidiVisible && midiEditGroup.isVisible() && showEditingPanelSet;
-    const bool showAudioTools = windowPanelAudioVisible && audioEditGroup.isVisible() && showEditingPanelSet;
-    const bool showFxPanel = windowPanelFxVisible && showSoundPanelSet;
-    const bool showMixerPanel = windowPanelTrackMixerVisible && (showProjectPanelSet || showSoundPanelSet);
+    const bool showArrangementPanel = windowPanelArrangementVisible
+                                      && showProjectPanelSet
+                                      && ! isDetachedPanelFloating (DetachedPanel::arrangement);
+    const bool showTrackPanel = windowPanelTrackVisible
+                                && showProjectPanelSet
+                                && ! isDetachedPanelFloating (DetachedPanel::tracks);
+    const bool showClipTools = windowPanelClipVisible
+                               && clipEditGroup.isVisible()
+                               && showEditingPanelSet
+                               && ! isDetachedPanelFloating (DetachedPanel::clip);
+    const bool showMidiTools = windowPanelMidiVisible
+                               && midiEditGroup.isVisible()
+                               && showEditingPanelSet
+                               && ! isDetachedPanelFloating (DetachedPanel::midi);
+    const bool showAudioTools = windowPanelAudioVisible
+                                && audioEditGroup.isVisible()
+                                && showEditingPanelSet
+                                && ! isDetachedPanelFloating (DetachedPanel::audio);
+    const bool showFxPanel = windowPanelFxVisible
+                             && showSoundPanelSet
+                             && ! isDetachedPanelFloating (DetachedPanel::fx);
+    const bool showMixerPanel = windowPanelTrackMixerVisible
+                                && (showProjectPanelSet || showSoundPanelSet)
+                                && ! isDetachedPanelFloating (DetachedPanel::trackMixer);
     const int panelSelectorHeight = defaultRowHeight + 8;
     const int dualColumnGap = denseLayout ? 6 : 8;
     const int leftDockScrollTrackWidth = denseLayout ? 14 : 16;
@@ -3254,7 +3661,23 @@ void BeatMakerNoRecord::resized()
     mixerRow1.removeFromLeft (10);
     trackHeightLabel.setBounds (mixerRow1.removeFromLeft (58).reduced (0, 1));
     mixerRow1.removeFromLeft (6);
+    const int minTrackHeightSliderWidth = 108;
+    const int verticalZoomButtonsWidth = juce::jmin (juce::jmax (132, mixerRow1.getWidth() / 3),
+                                                     juce::jmax (0, mixerRow1.getWidth() - minTrackHeightSliderWidth));
+    auto verticalZoomButtonsArea = mixerRow1.removeFromRight (verticalZoomButtonsWidth);
+    if (verticalZoomButtonsArea.getWidth() > 0)
+        mixerRow1.removeFromRight (6);
     trackHeightSlider.setBounds (mixerRow1.reduced (0, 1));
+    if (verticalZoomButtonsArea.getWidth() > 0)
+    {
+        layoutButtonRow (verticalZoomButtonsArea, { &zoomVerticalInButton, &zoomVerticalOutButton, &zoomVerticalResetButton });
+    }
+    else
+    {
+        zoomVerticalInButton.setBounds ({});
+        zoomVerticalOutButton.setBounds ({});
+        zoomVerticalResetButton.setBounds ({});
+    }
 
     auto mixerRow2 = nextRow (mixerControlsArea, defaultRowHeight + 2);
     trackVolumeLabel.setBounds (mixerRow2.removeFromLeft (34).reduced (0, 1));
@@ -3596,8 +4019,8 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
             timelineRuler.setBounds (rulerRow.reduced (0, 1));
             workspaceArea.removeFromTop (3);
 
-            const int minToolbarHeight = denseLayout ? 24 : 26;
-            const int maxToolbarHeight = denseLayout ? 40 : 44;
+            const int minToolbarHeight = denseLayout ? 22 : 24;
+            const int maxToolbarHeight = denseLayout ? 34 : 38;
             const int toolbarHeight = juce::jlimit (minToolbarHeight,
                                                     maxToolbarHeight,
                                                     juce::jmax (minToolbarHeight, workspaceArea.getHeight() / 11));
@@ -3632,9 +4055,12 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
         {
             auto mixerRegion = bounds;
             const int splitterThickness = denseLayout ? 8 : 10;
-            const bool showMixerAreaPanel = windowPanelMixerAreaVisible;
-            const bool showChannelRackPanel = windowPanelChannelRackVisible;
-            const bool showInspectorPanel = windowPanelInspectorVisible;
+            const bool showMixerAreaPanel = windowPanelMixerAreaVisible
+                                            && ! isDetachedPanelFloating (DetachedPanel::mixerArea);
+            const bool showChannelRackPanel = windowPanelChannelRackVisible
+                                              && ! isDetachedPanelFloating (DetachedPanel::channelRack);
+            const bool showInspectorPanel = windowPanelInspectorVisible
+                                            && ! isDetachedPanelFloating (DetachedPanel::inspector);
             const bool showRackAreaPanel = showChannelRackPanel || showInspectorPanel;
             mixerRackSplitter.setBounds ({});
             rackInspectorSplitter.setBounds ({});
@@ -3696,8 +4122,8 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
             }
 
             auto mixerContent = getGroupContent (mixerAreaGroup, mixerTopRegion);
-            const int minMixerToolbarHeight = denseLayout ? 24 : 26;
-            const int maxMixerToolbarHeight = denseLayout ? 40 : 44;
+            const int minMixerToolbarHeight = denseLayout ? 22 : 24;
+            const int maxMixerToolbarHeight = denseLayout ? 34 : 38;
             const int mixerToolbarHeight = juce::jlimit (minMixerToolbarHeight,
                                                          maxMixerToolbarHeight,
                                                          juce::jmax (minMixerToolbarHeight, mixerContent.getHeight() / 8));
@@ -3915,8 +4341,10 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
             }
 
             const auto effectiveViewMode = getPianoEditorLayoutModeSelection();
-            const bool allowPianoRollPanel = windowPanelPianoRollVisible;
-            const bool allowStepSequencerPanel = windowPanelStepSequencerVisible;
+            const bool allowPianoRollPanel = windowPanelPianoRollVisible
+                                             && ! isDetachedPanelFloating (DetachedPanel::pianoRoll);
+            const bool allowStepSequencerPanel = windowPanelStepSequencerVisible
+                                                 && ! isDetachedPanelFloating (DetachedPanel::stepSequencer);
             const int splitGap = densityMode == UiDensityMode::accessible ? 12 : (denseLayout ? 8 : 10);
             const int availableSplitHeight = juce::jmax (0, topSection.getHeight() - splitGap);
             auto layoutPianoRollEditor = [this, denseLayout] (juce::Rectangle<int> area)
@@ -3930,8 +4358,8 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
                     return;
                 }
 
-                const int minToolbarHeight = denseLayout ? 24 : 27;
-                const int maxToolbarHeight = denseLayout ? 40 : 44;
+                const int minToolbarHeight = denseLayout ? 22 : 24;
+                const int maxToolbarHeight = denseLayout ? 34 : 38;
                 const int toolbarHeight = juce::jlimit (minToolbarHeight,
                                                         maxToolbarHeight,
                                                         juce::jmax (minToolbarHeight, area.getHeight() / 7));
@@ -3968,8 +4396,8 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
                     return;
                 }
 
-                const int minToolbarHeight = denseLayout ? 24 : 27;
-                const int maxToolbarHeight = denseLayout ? 40 : 44;
+                const int minToolbarHeight = denseLayout ? 22 : 24;
+                const int maxToolbarHeight = denseLayout ? 34 : 38;
                 const int toolbarHeight = juce::jlimit (minToolbarHeight,
                                                         maxToolbarHeight,
                                                         juce::jmax (minToolbarHeight, area.getHeight() / 6));
@@ -4075,6 +4503,443 @@ void BeatMakerNoRecord::layoutSectionContent (FloatSection section, juce::Rectan
     }
 }
 
+void BeatMakerNoRecord::layoutDetachedPanelContent (DetachedPanel panel, juce::Rectangle<int> bounds)
+{
+    const float uiScale = getUiDensityScale();
+    const auto densityMode = uiDensityMode;
+    const bool compactLayout = bounds.getWidth() < roundToInt (900.0f * uiScale)
+                               || bounds.getHeight() < roundToInt (520.0f * uiScale);
+    const bool denseLayout = bounds.getWidth() < roundToInt (760.0f * uiScale)
+                             || bounds.getHeight() < roundToInt (420.0f * uiScale);
+    int defaultRowHeight = denseLayout ? 24 : (compactLayout ? 25 : 27);
+    int rowGap = denseLayout ? 3 : 5;
+    int groupInset = denseLayout ? 8 : 10;
+    int groupTitleInset = denseLayout ? 18 : 20;
+
+    if (densityMode == UiDensityMode::compact)
+    {
+        defaultRowHeight = juce::jmax (22, defaultRowHeight - 2);
+        rowGap = juce::jmax (2, rowGap - 1);
+        groupInset = juce::jmax (7, groupInset - 1);
+    }
+    else if (densityMode == UiDensityMode::accessible)
+    {
+        defaultRowHeight += 3;
+        rowGap += 1;
+        groupInset += 1;
+        groupTitleInset += 2;
+    }
+
+    bounds = bounds.reduced (6);
+
+    auto getGroupContent = [groupInset, groupTitleInset] (juce::GroupComponent& group, juce::Rectangle<int> area)
+    {
+        group.setBounds (area);
+
+        if (area.getWidth() <= 0 || area.getHeight() <= 0)
+            return juce::Rectangle<int>();
+
+        auto inner = area.reduced (groupInset);
+        if (inner.getHeight() <= groupTitleInset)
+            return juce::Rectangle<int>();
+
+        inner.removeFromTop (groupTitleInset);
+        return inner;
+    };
+
+    auto nextRow = [defaultRowHeight, rowGap] (juce::Rectangle<int>& area, int height = 0)
+    {
+        const int targetHeight = juce::jmax (0, juce::jmin (height > 0 ? height : defaultRowHeight, area.getHeight()));
+        auto row = area.removeFromTop (targetHeight);
+        if (area.getHeight() > 0)
+            area.removeFromTop (juce::jmin (rowGap, area.getHeight()));
+        return row;
+    };
+
+    auto getAdaptiveButtonRowHeight = [defaultRowHeight, denseLayout, densityMode] (int rowWidth, int buttonCount, int maxRows)
+    {
+        if (buttonCount <= 0 || rowWidth <= 0)
+            return defaultRowHeight;
+
+        const int gapX = rowWidth < 460 ? 4 : 6;
+        int minButtonWidth = denseLayout ? 52 : 60;
+        if (densityMode == UiDensityMode::compact)
+            minButtonWidth = juce::jmax (42, minButtonWidth - 10);
+        else if (densityMode == UiDensityMode::accessible)
+            minButtonWidth += 16;
+
+        const int columns = juce::jmax (1, juce::jmin (buttonCount, (rowWidth + gapX) / (minButtonWidth + gapX)));
+        int rows = juce::jmax (1, (buttonCount + columns - 1) / columns);
+        rows = juce::jmin (juce::jmax (1, maxRows), rows);
+        return defaultRowHeight * rows + juce::jmax (0, rows - 1) * 4;
+    };
+
+    auto layoutButtonRow = [denseLayout, defaultRowHeight, densityMode] (juce::Rectangle<int> row, std::initializer_list<juce::Button*> buttons)
+    {
+        const int count = (int) buttons.size();
+        if (count == 0 || row.getWidth() <= 0 || row.getHeight() <= 0)
+        {
+            for (auto* button : buttons)
+                if (button != nullptr)
+                    button->setBounds ({});
+            return;
+        }
+
+        const int gapX = row.getWidth() < 460 ? 4 : 6;
+        int minButtonWidth = denseLayout ? 52 : 60;
+        if (densityMode == UiDensityMode::compact)
+            minButtonWidth = juce::jmax (42, minButtonWidth - 10);
+        else if (densityMode == UiDensityMode::accessible)
+            minButtonWidth += 16;
+
+        const int columns = juce::jmax (1, juce::jmin (count, (row.getWidth() + gapX) / (minButtonWidth + gapX)));
+        const int rows = juce::jmax (1, (count + columns - 1) / columns);
+        const int totalGapY = juce::jmax (0, rows - 1) * 4;
+        const int buttonHeight = juce::jmax (18, juce::jmin (defaultRowHeight + 2, (row.getHeight() - totalGapY) / rows));
+
+        int index = 0;
+        auto area = row;
+        for (int r = 0; r < rows; ++r)
+        {
+            auto line = area.removeFromTop (buttonHeight);
+            if (area.getHeight() > 0 && r < rows - 1)
+                area.removeFromTop (4);
+
+            const int buttonsRemaining = count - index;
+            const int buttonsThisRow = juce::jmin (columns, buttonsRemaining);
+            const int totalGapX = juce::jmax (0, buttonsThisRow - 1) * gapX;
+            const int buttonWidth = juce::jmax (1, (line.getWidth() - totalGapX) / juce::jmax (1, buttonsThisRow));
+
+            for (int c = 0; c < buttonsThisRow; ++c)
+            {
+                if (auto* button = *(buttons.begin() + index))
+                    button->setBounds (line.removeFromLeft (buttonWidth).reduced (0, 1));
+
+                if (line.getWidth() > gapX && c < buttonsThisRow - 1)
+                    line.removeFromLeft (gapX);
+
+                ++index;
+            }
+        }
+    };
+
+    switch (panel)
+    {
+        case DetachedPanel::arrangement:
+        {
+            auto area = getGroupContent (arrangementGroup, bounds);
+            const int rowHeight = juce::jmax (defaultRowHeight + 2, getAdaptiveButtonRowHeight (area.getWidth(), 6, 2));
+            layoutButtonRow (nextRow (area, rowHeight), { &showMarkerTrackButton, &showArrangerTrackButton, &addMarkerButton,
+                                                          &prevMarkerButton, &nextMarkerButton, &loopMarkersButton });
+            layoutButtonRow (nextRow (area, rowHeight), { &addSectionButton, &prevSectionButton, &nextSectionButton,
+                                                          &loopSectionButton, &jumpPrevBarButton, &jumpNextBarButton });
+            break;
+        }
+        case DetachedPanel::tracks:
+        {
+            auto area = getGroupContent (trackGroup, bounds);
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 8, 2)),
+                             { &addTrackButton, &addMidiTrackButton, &addFloatingSynthTrackButton,
+                               &moveTrackUpButton, &moveTrackDownButton, &duplicateTrackButton, &colorTrackButton, &renameTrackButton });
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 6, 2)),
+                             { &importAudioButton, &importMidiButton, &createMidiClipButton,
+                               &splitAllTracksButton, &insertBarButton, &deleteBarButton });
+            auto editToolRow = nextRow (area, defaultRowHeight);
+            editToolLabel.setBounds (editToolRow.removeFromLeft (66).reduced (0, 1));
+            editToolRow.removeFromLeft (6);
+            layoutButtonRow (editToolRow, { &editToolSelectButton, &editToolPencilButton, &editToolScissorsButton, &editToolResizeButton });
+            auto synthRow = nextRow (area, defaultRowHeight);
+            defaultSynthModeLabel.setBounds (synthRow.removeFromLeft (96).reduced (0, 1));
+            synthRow.removeFromLeft (6);
+            defaultSynthModeBox.setBounds (synthRow.reduced (0, 1));
+            break;
+        }
+        case DetachedPanel::clip:
+        {
+            auto area = getGroupContent (clipEditGroup, bounds);
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 8, 2)),
+                             { &copyButton, &cutButton, &pasteButton, &deleteButton, &duplicateButton, &splitButton, &selectAllButton, &deselectAllButton });
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 6, 2)),
+                             { &trimStartButton, &trimEndButton, &moveStartToCursorButton, &moveEndToCursorButton, &nudgeLeftButton, &nudgeRightButton });
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 6, 2)),
+                             { &slipLeftButton, &slipRightButton, &moveToPrevButton, &moveToNextButton, &toggleClipLoopButton, &renameClipButton });
+            break;
+        }
+        case DetachedPanel::midi:
+        {
+            auto area = getGroupContent (midiEditGroup, bounds);
+            midiToolsTabs.setBounds (nextRow (area, defaultRowHeight + 2).reduced (0, 1));
+
+            if (midiToolsTabs.getCurrentTabIndex() != 1)
+            {
+                auto row1 = nextRow (area, defaultRowHeight + 2);
+                const int quantizeTypeWidth = juce::jmax (100, row1.getWidth() / 4);
+                quantizeTypeBox.setBounds (row1.removeFromLeft (quantizeTypeWidth).reduced (0, 1));
+                row1.removeFromLeft (6);
+                quantizeButton.setBounds (row1.removeFromLeft (juce::jmax (80, row1.getWidth() / 5)).reduced (0, 1));
+                row1.removeFromLeft (6);
+                gridLabel.setBounds (row1.removeFromLeft (34).reduced (0, 1));
+                row1.removeFromLeft (6);
+                gridBox.setBounds (row1.removeFromLeft (juce::jmax (86, row1.getWidth() / 4)).reduced (0, 1));
+                row1.removeFromLeft (6);
+                const int utilityWidth = juce::jmax (0, (row1.getWidth() - 6) / 2);
+                midiLegatoButton.setBounds (row1.removeFromLeft (utilityWidth).reduced (0, 1));
+                if (row1.getWidth() > 6)
+                    row1.removeFromLeft (6);
+                midiBounceToAudioButton.setBounds (row1.reduced (0, 1));
+
+                layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 6, 2)),
+                                 { &midiTransposeDownButton, &midiTransposeUpButton, &midiOctaveDownButton,
+                                   &midiOctaveUpButton, &midiVelocityDownButton, &midiVelocityUpButton });
+                layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 2, 2)),
+                                 { &midiHumanizeTimingButton, &midiHumanizeVelocityButton });
+                layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 4, 2)),
+                                 { &midiGenerateChordsButton, &midiGenerateArpButton, &midiGenerateBassButton, &midiGenerateDrumsButton });
+            }
+            else
+            {
+                auto layoutLabelCombo = [] (juce::Rectangle<int>& row, juce::Label& label, juce::ComboBox& combo, int labelWidth)
+                {
+                    label.setBounds (row.removeFromLeft (labelWidth).reduced (0, 1));
+                    row.removeFromLeft (4);
+                    combo.setBounds (row.reduced (0, 1));
+                };
+                auto layoutLabelSlider = [] (juce::Rectangle<int>& row, juce::Label& label, juce::Slider& slider, int labelWidth)
+                {
+                    label.setBounds (row.removeFromLeft (labelWidth).reduced (0, 1));
+                    row.removeFromLeft (4);
+                    slider.setBounds (row.reduced (0, 1));
+                };
+
+                auto rowA = nextRow (area, defaultRowHeight + 2);
+                auto keyCell = rowA.removeFromLeft (juce::jmax (140, rowA.getWidth() / 4));
+                rowA.removeFromLeft (6);
+                auto scaleCell = rowA.removeFromLeft (juce::jmax (160, rowA.getWidth() / 3));
+                rowA.removeFromLeft (6);
+                layoutLabelCombo (keyCell, chordDirectoryRootLabel, chordDirectoryRootBox, 46);
+                layoutLabelCombo (scaleCell, chordDirectoryScaleLabel, chordDirectoryScaleBox, 46);
+                layoutLabelCombo (rowA, chordDirectoryProgressionLabel, chordDirectoryProgressionBox, 92);
+
+                auto rowB = nextRow (area, defaultRowHeight + 2);
+                auto barsCell = rowB.removeFromLeft (juce::jmax (116, rowB.getWidth() / 4));
+                rowB.removeFromLeft (6);
+                auto sigCell = rowB.removeFromLeft (juce::jmax (140, rowB.getWidth() / 3));
+                rowB.removeFromLeft (6);
+                layoutLabelCombo (barsCell, chordDirectoryBarsLabel, chordDirectoryBarsBox, 42);
+                layoutLabelCombo (sigCell, chordDirectoryTimeSignatureLabel, chordDirectoryTimeSignatureBox, 58);
+                layoutLabelCombo (rowB, chordDirectoryOctaveLabel, chordDirectoryOctaveBox, 54);
+
+                auto rowC = nextRow (area, defaultRowHeight + 2);
+                auto voicingCell = rowC.removeFromLeft (juce::jmax (132, rowC.getWidth() / 3));
+                rowC.removeFromLeft (6);
+                auto densityCell = rowC.removeFromLeft (juce::jmax (132, rowC.getWidth() / 3));
+                rowC.removeFromLeft (6);
+                layoutLabelCombo (voicingCell, chordDirectoryVoicingLabel, chordDirectoryVoicingBox, 58);
+                layoutLabelCombo (densityCell, chordDirectoryDensityLabel, chordDirectoryDensityBox, 58);
+                layoutLabelCombo (rowC, chordDirectoryPreviewPresetLabel, chordDirectoryPreviewPresetBox, 96);
+
+                auto rowD = nextRow (area, defaultRowHeight + 2);
+                auto velocityCell = rowD.removeFromLeft (juce::jmax (150, rowD.getWidth() / 2));
+                rowD.removeFromLeft (6);
+                layoutLabelSlider (velocityCell, chordDirectoryVelocityLabel, chordDirectoryVelocitySlider, 64);
+                layoutLabelSlider (rowD, chordDirectorySwingLabel, chordDirectorySwingSlider, 54);
+
+                layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 4, 2)),
+                                 { &chordDirectoryPreviewButton, &chordDirectoryApplyButton,
+                                   &chordDirectoryExportMidiButton, &chordDirectoryExportWavButton });
+            }
+            break;
+        }
+        case DetachedPanel::audio:
+        {
+            auto area = getGroupContent (audioEditGroup, bounds);
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 5, 2)),
+                             { &audioGainDownButton, &audioGainUpButton, &audioFadeInButton, &audioFadeOutButton, &audioClearFadesButton });
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 7, 2)),
+                             { &audioReverseButton, &audioSpeedDownButton, &audioSpeedUpButton,
+                               &audioPitchDownButton, &audioPitchUpButton, &audioAutoTempoButton, &audioWarpButton });
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 4, 2)),
+                             { &audioAlignToBarButton, &audioMake2BarLoopButton, &audioMake4BarLoopButton, &audioFillTransportLoopButton });
+            break;
+        }
+        case DetachedPanel::fx:
+        {
+            auto area = getGroupContent (fxGroup, bounds);
+            auto row1 = nextRow (area, defaultRowHeight + 1);
+            fxChainLabel.setBounds (row1.removeFromLeft (54).reduced (0, 1));
+            row1.removeFromLeft (6);
+            auto actions = row1.removeFromRight (juce::jmax (176, row1.getWidth() / 2));
+            fxChainBox.setBounds (row1.reduced (0, 1));
+            layoutButtonRow (actions, { &fxRefreshButton, &fxScanButton, &fxScanSkippedButton, &fxPrepPlaybackButton });
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 2, 2)),
+                             { &fxAddExternalInstrumentButton, &fxAddExternalButton });
+            layoutButtonRow (nextRow (area, getAdaptiveButtonRowHeight (area.getWidth(), 5, 2)),
+                             { &fxOpenEditorButton, &fxMoveUpButton, &fxMoveDownButton, &fxBypassButton, &fxDeleteButton });
+            break;
+        }
+        case DetachedPanel::trackMixer:
+        {
+            auto area = getGroupContent (mixerGroup, bounds);
+            auto row1 = nextRow (area, defaultRowHeight + 2);
+            selectedTrackLabel.setBounds (row1.removeFromLeft (juce::jmax (130, row1.getWidth() / 2)).reduced (0, 1));
+            row1.removeFromLeft (6);
+            trackMuteButton.setBounds (row1.removeFromLeft (64).reduced (0, 1));
+            row1.removeFromLeft (6);
+            trackSoloButton.setBounds (row1.removeFromLeft (64).reduced (0, 1));
+            row1.removeFromLeft (8);
+            trackHeightLabel.setBounds (row1.removeFromLeft (60).reduced (0, 1));
+            row1.removeFromLeft (6);
+            auto zoomButtons = row1.removeFromRight (juce::jmax (150, row1.getWidth() / 3));
+            if (zoomButtons.getWidth() > 0)
+                row1.removeFromRight (6);
+            trackHeightSlider.setBounds (row1.reduced (0, 1));
+            layoutButtonRow (zoomButtons, { &zoomVerticalInButton, &zoomVerticalOutButton, &zoomVerticalResetButton });
+
+            auto row2 = nextRow (area, defaultRowHeight + 2);
+            trackVolumeLabel.setBounds (row2.removeFromLeft (36).reduced (0, 1));
+            row2.removeFromLeft (6);
+            trackVolumeSlider.setBounds (row2.removeFromLeft (juce::jmax (110, row2.getWidth() / 2)).reduced (0, 1));
+            row2.removeFromLeft (6);
+            trackPanLabel.setBounds (row2.removeFromLeft (34).reduced (0, 1));
+            row2.removeFromLeft (6);
+            trackPanSlider.setBounds (row2.reduced (0, 1));
+            break;
+        }
+        case DetachedPanel::mixerArea:
+        {
+            auto area = getGroupContent (mixerAreaGroup, bounds);
+            const int minToolbarHeight = denseLayout ? 22 : 24;
+            const int maxToolbarHeight = denseLayout ? 34 : 38;
+            const int toolbarHeight = juce::jlimit (minToolbarHeight,
+                                                    maxToolbarHeight,
+                                                    juce::jmax (minToolbarHeight, area.getHeight() / 8));
+            auto toolbarRow = nextRow (area, toolbarHeight);
+            mixerToolsToolbar.setBounds (toolbarRow.reduced (0, 1));
+            mixerArea.setBounds (area);
+            break;
+        }
+        case DetachedPanel::channelRack:
+        {
+            auto area = getGroupContent (channelRackGroup, bounds);
+            const int splitGap = denseLayout ? 8 : 10;
+            const int minControlsHeight = denseLayout ? 88 : 102;
+            const int minPreviewHeight = denseLayout ? 96 : 120;
+            const int availableHeight = juce::jmax (0, area.getHeight() - splitGap);
+            juce::Rectangle<int> controlsArea = area;
+            juce::Rectangle<int> previewArea;
+
+            if (availableHeight >= minControlsHeight + minPreviewHeight)
+            {
+                const int maxControlsHeight = juce::jmax (minControlsHeight, availableHeight - minPreviewHeight);
+                const int controlsHeight = juce::jlimit (minControlsHeight,
+                                                         maxControlsHeight,
+                                                         roundToInt ((float) availableHeight * channelRackControlsHeightRatio));
+                controlsArea = area.removeFromTop (controlsHeight);
+                if (area.getHeight() > splitGap)
+                    area.removeFromTop (splitGap);
+                previewArea = area;
+            }
+            else
+            {
+                const int fallbackControlsHeight = juce::jmin (area.getHeight(),
+                                                               juce::jmax (72, (area.getHeight() * 2) / 3));
+                controlsArea = area.removeFromTop (fallbackControlsHeight);
+                previewArea = area;
+            }
+
+            channelRackPreview.setBounds (previewArea.getHeight() >= 56 ? previewArea : juce::Rectangle<int>());
+
+            auto row1 = nextRow (controlsArea, defaultRowHeight);
+            channelRackTrackLabel.setBounds (row1.removeFromLeft (42).reduced (0, 1));
+            row1.removeFromLeft (6);
+            channelRackTrackBox.setBounds (row1.reduced (0, 1));
+
+            auto row2 = nextRow (controlsArea, defaultRowHeight);
+            channelRackPluginLabel.setBounds (row2.removeFromLeft (42).reduced (0, 1));
+            row2.removeFromLeft (6);
+            channelRackPluginBox.setBounds (row2.reduced (0, 1));
+
+            const int rackButtonGap = 6;
+            auto row3 = nextRow (controlsArea, defaultRowHeight + 2);
+            const int rackButtonWidth = juce::jmax (0, (row3.getWidth() - rackButtonGap * 2) / 3);
+            channelRackAddInstrumentButton.setBounds (row3.removeFromLeft (rackButtonWidth).reduced (0, 1));
+            row3.removeFromLeft (rackButtonGap);
+            channelRackAddFxButton.setBounds (row3.removeFromLeft (rackButtonWidth).reduced (0, 1));
+            row3.removeFromLeft (rackButtonGap);
+            channelRackOpenPluginButton.setBounds (row3.reduced (0, 1));
+            break;
+        }
+        case DetachedPanel::inspector:
+        {
+            auto area = getGroupContent (inspectorGroup, bounds);
+            inspectorTrackNameLabel.setBounds (nextRow (area, 24).reduced (2, 0));
+            inspectorRouteLabel.setBounds (nextRow (area, 24).reduced (2, 0));
+            inspectorPluginLabel.setBounds (nextRow (area, 24).reduced (2, 0));
+            inspectorMeterLabel.setBounds (nextRow (area, 24).reduced (2, 0));
+            break;
+        }
+        case DetachedPanel::pianoRoll:
+        {
+            auto area = getGroupContent (pianoRollGroup, bounds);
+            const int minToolbarHeight = denseLayout ? 22 : 24;
+            const int maxToolbarHeight = denseLayout ? 34 : 38;
+            const int toolbarHeight = juce::jlimit (minToolbarHeight,
+                                                    maxToolbarHeight,
+                                                    juce::jmax (minToolbarHeight, area.getHeight() / 7));
+            auto toolbarRow = area.removeFromTop (juce::jmin (toolbarHeight, area.getHeight()));
+            const int toolbarGap = denseLayout ? 3 : 5;
+            if (area.getHeight() > toolbarGap)
+                area.removeFromTop (toolbarGap);
+            pianoRollToolbar.setBounds (toolbarRow.reduced (0, 1));
+
+            const int scrollThickness = denseLayout ? 12 : 14;
+            auto editorArea = area;
+            auto horizontalBar = editorArea.removeFromBottom (juce::jmin (scrollThickness, editorArea.getHeight()));
+            if (editorArea.getHeight() > 2)
+                editorArea.removeFromBottom (2);
+            auto verticalBar = editorArea.removeFromRight (juce::jmin (scrollThickness, editorArea.getWidth()));
+            if (editorArea.getWidth() > 2)
+                editorArea.removeFromRight (2);
+            pianoRollHorizontalScrollBar.setBounds (horizontalBar.withTrimmedRight (verticalBar.getWidth()));
+            pianoRollVerticalScrollBar.setBounds (verticalBar);
+            midiPianoRoll.setBounds (editorArea);
+            updatePianoRollScrollbarsFromViewport();
+            break;
+        }
+        case DetachedPanel::stepSequencer:
+        {
+            auto area = getGroupContent (stepSequencerGroup, bounds);
+            const int minToolbarHeight = denseLayout ? 22 : 24;
+            const int maxToolbarHeight = denseLayout ? 34 : 38;
+            const int toolbarHeight = juce::jlimit (minToolbarHeight,
+                                                    maxToolbarHeight,
+                                                    juce::jmax (minToolbarHeight, area.getHeight() / 6));
+            auto toolbarRow = area.removeFromTop (juce::jmin (toolbarHeight, area.getHeight()));
+            const int toolbarGap = denseLayout ? 3 : 5;
+            if (area.getHeight() > toolbarGap)
+                area.removeFromTop (toolbarGap);
+            stepSequencerToolbar.setBounds (toolbarRow.reduced (0, 1));
+
+            const int scrollThickness = denseLayout ? 12 : 14;
+            auto editorArea = area;
+            auto horizontalBar = editorArea.removeFromBottom (juce::jmin (scrollThickness, editorArea.getHeight()));
+            if (editorArea.getHeight() > 2)
+                editorArea.removeFromBottom (2);
+            stepSequencerHorizontalScrollBar.setBounds (horizontalBar);
+            stepSequencer.setBounds (editorArea);
+            updateStepSequencerScrollbarFromPageContext();
+            break;
+        }
+        case DetachedPanel::count:
+            break;
+    }
+
+    if (! isDetachedPanelVisibleInLayout (panel))
+    {
+        forEachDetachedPanelComponent (panel, [] (juce::Component& component) { component.setBounds ({}); });
+    }
+}
+
 bool BeatMakerNoRecord::isSectionFloating (FloatSection section) const
 {
     switch (section)
@@ -4167,9 +5032,12 @@ void BeatMakerNoRecord::setupCommandToolbar()
         definition.label = label;
         definition.tooltip = tooltip;
         definition.isToggleButton = isToggleButton;
-        definition.preferredWidth = juce::jmax (38, preferredWidth);
-        definition.minWidth = juce::jmax (34, definition.preferredWidth - 16);
-        definition.maxWidth = juce::jmax (definition.preferredWidth, definition.preferredWidth + 30);
+        definition.iconOnly = true;
+        definition.iconGlyph = getToolbarIconGlyphForItem (itemId);
+        const int compactPreferredWidth = juce::jlimit (30, 40, preferredWidth - 14);
+        definition.preferredWidth = compactPreferredWidth;
+        definition.minWidth = juce::jmax (28, compactPreferredWidth - 6);
+        definition.maxWidth = juce::jmax (compactPreferredWidth, compactPreferredWidth + 8);
         definition.onClick = std::move (onClick);
         definition.isEnabled = std::move (isEnabled);
         definition.isToggled = std::move (isToggled);
@@ -4371,9 +5239,12 @@ void BeatMakerNoRecord::setupTrackAreaToolbar()
         definition.label = label;
         definition.tooltip = tooltip;
         definition.isToggleButton = isToggleButton;
-        definition.preferredWidth = juce::jmax (38, preferredWidth);
-        definition.minWidth = juce::jmax (34, definition.preferredWidth - 16);
-        definition.maxWidth = juce::jmax (definition.preferredWidth, definition.preferredWidth + 30);
+        definition.iconOnly = true;
+        definition.iconGlyph = getToolbarIconGlyphForItem (itemId);
+        const int compactPreferredWidth = juce::jlimit (30, 40, preferredWidth - 14);
+        definition.preferredWidth = compactPreferredWidth;
+        definition.minWidth = juce::jmax (28, compactPreferredWidth - 6);
+        definition.maxWidth = juce::jmax (compactPreferredWidth, compactPreferredWidth + 8);
         definition.onClick = std::move (onClick);
         definition.isEnabled = std::move (isEnabled);
         definition.isToggled = std::move (isToggled);
@@ -4565,9 +5436,12 @@ void BeatMakerNoRecord::setupMixerToolsToolbar()
         definition.label = label;
         definition.tooltip = tooltip;
         definition.isToggleButton = isToggleButton;
-        definition.preferredWidth = juce::jmax (38, preferredWidth);
-        definition.minWidth = juce::jmax (34, definition.preferredWidth - 16);
-        definition.maxWidth = juce::jmax (definition.preferredWidth, definition.preferredWidth + 30);
+        definition.iconOnly = true;
+        definition.iconGlyph = getToolbarIconGlyphForItem (itemId);
+        const int compactPreferredWidth = juce::jlimit (30, 40, preferredWidth - 14);
+        definition.preferredWidth = compactPreferredWidth;
+        definition.minWidth = juce::jmax (28, compactPreferredWidth - 6);
+        definition.maxWidth = juce::jmax (compactPreferredWidth, compactPreferredWidth + 8);
         definition.onClick = std::move (onClick);
         definition.isEnabled = std::move (isEnabled);
         definition.isToggled = std::move (isToggled);
@@ -4994,9 +5868,12 @@ void BeatMakerNoRecord::setupStepSequencerToolbar()
         definition.label = label;
         definition.tooltip = tooltip;
         definition.isToggleButton = isToggleButton;
-        definition.preferredWidth = juce::jmax (38, preferredWidth);
-        definition.minWidth = juce::jmax (34, definition.preferredWidth - 16);
-        definition.maxWidth = juce::jmax (definition.preferredWidth, definition.preferredWidth + 30);
+        definition.iconOnly = true;
+        definition.iconGlyph = getToolbarIconGlyphForItem (itemId);
+        const int compactPreferredWidth = juce::jlimit (30, 40, preferredWidth - 14);
+        definition.preferredWidth = compactPreferredWidth;
+        definition.minWidth = juce::jmax (28, compactPreferredWidth - 6);
+        definition.maxWidth = juce::jmax (compactPreferredWidth, compactPreferredWidth + 8);
         definition.onClick = std::move (onClick);
         definition.isEnabled = std::move (isEnabled);
         definition.isToggled = std::move (isToggled);
@@ -5072,6 +5949,306 @@ void BeatMakerNoRecord::refreshAllToolbarStates()
     refreshStepSequencerToolbarState();
 }
 
+bool BeatMakerNoRecord::isDetachedPanelFloating (DetachedPanel panel) const
+{
+    const auto index = static_cast<size_t> (panel);
+    if (index >= detachedPanelWindows.size())
+        return false;
+
+    return detachedPanelWindows[index].floating;
+}
+
+juce::String BeatMakerNoRecord::getDetachedPanelFloatingTitle (DetachedPanel panel) const
+{
+    switch (panel)
+    {
+        case DetachedPanel::arrangement:   return "Arrangement Panel";
+        case DetachedPanel::tracks:        return "Tracks & Import Panel";
+        case DetachedPanel::clip:          return "Clip Editing Panel";
+        case DetachedPanel::midi:          return "MIDI Editing Panel";
+        case DetachedPanel::audio:         return "Audio Editing Panel";
+        case DetachedPanel::fx:            return "FX Chain Panel";
+        case DetachedPanel::trackMixer:    return "Track Mixer Panel";
+        case DetachedPanel::mixerArea:     return "Mixer Area Panel";
+        case DetachedPanel::channelRack:   return "Channel Rack Panel";
+        case DetachedPanel::inspector:     return "Inspector Panel";
+        case DetachedPanel::pianoRoll:     return "Piano Roll Panel";
+        case DetachedPanel::stepSequencer: return "Step Sequencer Panel";
+        case DetachedPanel::count:         break;
+    }
+
+    return "Detached Panel";
+}
+
+juce::Component* BeatMakerNoRecord::getDetachedPanelDockParent (DetachedPanel panel)
+{
+    switch (panel)
+    {
+        case DetachedPanel::arrangement:
+        case DetachedPanel::tracks:
+        case DetachedPanel::clip:
+        case DetachedPanel::midi:
+        case DetachedPanel::audio:
+        case DetachedPanel::fx:
+        case DetachedPanel::trackMixer:
+            return this;
+        case DetachedPanel::mixerArea:
+        case DetachedPanel::channelRack:
+        case DetachedPanel::inspector:
+            return &mixerSection;
+        case DetachedPanel::pianoRoll:
+        case DetachedPanel::stepSequencer:
+            return &pianoSection;
+        case DetachedPanel::count:
+            break;
+    }
+
+    return this;
+}
+
+bool BeatMakerNoRecord::isDetachedPanelVisibleInLayout (DetachedPanel panel) const
+{
+    switch (panel)
+    {
+        case DetachedPanel::arrangement:   return windowPanelArrangementVisible;
+        case DetachedPanel::tracks:        return windowPanelTrackVisible;
+        case DetachedPanel::clip:          return windowPanelClipVisible;
+        case DetachedPanel::midi:          return windowPanelMidiVisible;
+        case DetachedPanel::audio:         return windowPanelAudioVisible;
+        case DetachedPanel::fx:            return windowPanelFxVisible;
+        case DetachedPanel::trackMixer:    return windowPanelTrackMixerVisible;
+        case DetachedPanel::mixerArea:     return windowPanelMixerAreaVisible;
+        case DetachedPanel::channelRack:   return windowPanelChannelRackVisible;
+        case DetachedPanel::inspector:     return windowPanelInspectorVisible;
+        case DetachedPanel::pianoRoll:     return windowPanelPianoRollVisible;
+        case DetachedPanel::stepSequencer: return windowPanelStepSequencerVisible;
+        case DetachedPanel::count:         break;
+    }
+
+    return false;
+}
+
+void BeatMakerNoRecord::forEachDetachedPanelComponent (DetachedPanel panel,
+                                                       const std::function<void (juce::Component&)>& visitor)
+{
+    if (visitor == nullptr)
+        return;
+
+    auto visitAll = [&visitor] (std::initializer_list<juce::Component*> components)
+    {
+        for (auto* component : components)
+            if (component != nullptr)
+                visitor (*component);
+    };
+
+    switch (panel)
+    {
+        case DetachedPanel::arrangement:
+            visitAll ({ &arrangementGroup, &showMarkerTrackButton, &showArrangerTrackButton,
+                        &addMarkerButton, &prevMarkerButton, &nextMarkerButton, &loopMarkersButton,
+                        &addSectionButton, &prevSectionButton, &nextSectionButton, &loopSectionButton,
+                        &jumpPrevBarButton, &jumpNextBarButton });
+            break;
+        case DetachedPanel::tracks:
+            visitAll ({ &trackGroup, &addTrackButton, &addMidiTrackButton, &addFloatingSynthTrackButton,
+                        &moveTrackUpButton, &moveTrackDownButton, &duplicateTrackButton, &colorTrackButton,
+                        &renameTrackButton, &importAudioButton, &importMidiButton, &createMidiClipButton,
+                        &splitAllTracksButton, &insertBarButton, &deleteBarButton,
+                        &editToolLabel, &editToolSelectButton, &editToolPencilButton, &editToolScissorsButton, &editToolResizeButton,
+                        &defaultSynthModeLabel, &defaultSynthModeBox });
+            break;
+        case DetachedPanel::clip:
+            visitAll ({ &clipEditGroup, &copyButton, &cutButton, &pasteButton, &deleteButton, &duplicateButton,
+                        &splitButton, &selectAllButton, &deselectAllButton,
+                        &trimStartButton, &trimEndButton, &moveStartToCursorButton, &moveEndToCursorButton,
+                        &nudgeLeftButton, &nudgeRightButton, &slipLeftButton, &slipRightButton,
+                        &moveToPrevButton, &moveToNextButton, &toggleClipLoopButton, &renameClipButton });
+            break;
+        case DetachedPanel::midi:
+            visitAll ({ &midiEditGroup, &midiToolsTabs, &quantizeTypeBox, &quantizeButton, &gridLabel, &gridBox,
+                        &midiLegatoButton, &midiBounceToAudioButton, &midiTransposeDownButton, &midiTransposeUpButton,
+                        &midiOctaveDownButton, &midiOctaveUpButton, &midiVelocityDownButton, &midiVelocityUpButton,
+                        &midiHumanizeTimingButton, &midiHumanizeVelocityButton,
+                        &midiGenerateChordsButton, &midiGenerateArpButton, &midiGenerateBassButton, &midiGenerateDrumsButton,
+                        &chordDirectoryRootLabel, &chordDirectoryRootBox,
+                        &chordDirectoryScaleLabel, &chordDirectoryScaleBox,
+                        &chordDirectoryProgressionLabel, &chordDirectoryProgressionBox,
+                        &chordDirectoryBarsLabel, &chordDirectoryBarsBox,
+                        &chordDirectoryTimeSignatureLabel, &chordDirectoryTimeSignatureBox,
+                        &chordDirectoryOctaveLabel, &chordDirectoryOctaveBox,
+                        &chordDirectoryVoicingLabel, &chordDirectoryVoicingBox,
+                        &chordDirectoryDensityLabel, &chordDirectoryDensityBox,
+                        &chordDirectoryPreviewPresetLabel, &chordDirectoryPreviewPresetBox,
+                        &chordDirectoryVelocityLabel, &chordDirectoryVelocitySlider,
+                        &chordDirectorySwingLabel, &chordDirectorySwingSlider,
+                        &chordDirectoryPreviewButton, &chordDirectoryApplyButton,
+                        &chordDirectoryExportMidiButton, &chordDirectoryExportWavButton });
+            break;
+        case DetachedPanel::audio:
+            visitAll ({ &audioEditGroup, &audioGainDownButton, &audioGainUpButton, &audioFadeInButton,
+                        &audioFadeOutButton, &audioClearFadesButton, &audioReverseButton, &audioSpeedDownButton,
+                        &audioSpeedUpButton, &audioPitchDownButton, &audioPitchUpButton, &audioAutoTempoButton,
+                        &audioWarpButton, &audioAlignToBarButton, &audioMake2BarLoopButton, &audioMake4BarLoopButton,
+                        &audioFillTransportLoopButton });
+            break;
+        case DetachedPanel::fx:
+            visitAll ({ &fxGroup, &fxChainLabel, &fxChainBox, &fxRefreshButton, &fxScanButton, &fxScanSkippedButton,
+                        &fxPrepPlaybackButton, &fxAddExternalInstrumentButton, &fxAddExternalButton, &fxOpenEditorButton,
+                        &fxMoveUpButton, &fxMoveDownButton, &fxBypassButton, &fxDeleteButton });
+            break;
+        case DetachedPanel::trackMixer:
+            visitAll ({ &mixerGroup, &selectedTrackLabel, &trackMuteButton, &trackSoloButton, &trackHeightLabel,
+                        &trackHeightSlider, &zoomVerticalInButton, &zoomVerticalOutButton, &zoomVerticalResetButton,
+                        &trackVolumeLabel, &trackVolumeSlider, &trackPanLabel, &trackPanSlider });
+            break;
+        case DetachedPanel::mixerArea:
+            visitAll ({ &mixerAreaGroup, &mixerToolsToolbar, &mixerArea });
+            break;
+        case DetachedPanel::channelRack:
+            visitAll ({ &channelRackGroup, &channelRackPreview, &channelRackTrackLabel, &channelRackTrackBox,
+                        &channelRackPluginLabel, &channelRackPluginBox, &channelRackAddInstrumentButton,
+                        &channelRackAddFxButton, &channelRackOpenPluginButton });
+            break;
+        case DetachedPanel::inspector:
+            visitAll ({ &inspectorGroup, &inspectorTrackNameLabel, &inspectorRouteLabel,
+                        &inspectorPluginLabel, &inspectorMeterLabel });
+            break;
+        case DetachedPanel::pianoRoll:
+            visitAll ({ &pianoRollGroup, &pianoRollToolbar, &midiPianoRoll,
+                        &pianoRollHorizontalScrollBar, &pianoRollVerticalScrollBar });
+            break;
+        case DetachedPanel::stepSequencer:
+            visitAll ({ &stepSequencerGroup, &stepSequencerToolbar, &stepSequencer,
+                        &stepSequencerHorizontalScrollBar });
+            break;
+        case DetachedPanel::count:
+            break;
+    }
+}
+
+void BeatMakerNoRecord::toggleDetachedPanelFloating (DetachedPanel panel)
+{
+    setDetachedPanelFloating (panel, ! isDetachedPanelFloating (panel));
+}
+
+void BeatMakerNoRecord::setDetachedPanelFloating (DetachedPanel panel, bool shouldFloat, bool)
+{
+    const auto index = static_cast<size_t> (panel);
+    if (index >= detachedPanelWindows.size())
+        return;
+
+    auto& state = detachedPanelWindows[index];
+    if (state.container == nullptr || state.floating == shouldFloat)
+        return;
+
+    auto getPropertyKey = [] (DetachedPanel p) -> const char*
+    {
+        switch (p)
+        {
+            case DetachedPanel::arrangement:   return "windowFloatPanelArrangement";
+            case DetachedPanel::tracks:        return "windowFloatPanelTracks";
+            case DetachedPanel::clip:          return "windowFloatPanelClip";
+            case DetachedPanel::midi:          return "windowFloatPanelMidi";
+            case DetachedPanel::audio:         return "windowFloatPanelAudio";
+            case DetachedPanel::fx:            return "windowFloatPanelFx";
+            case DetachedPanel::trackMixer:    return "windowFloatPanelTrackMixer";
+            case DetachedPanel::mixerArea:     return "windowFloatPanelMixerArea";
+            case DetachedPanel::channelRack:   return "windowFloatPanelChannelRack";
+            case DetachedPanel::inspector:     return "windowFloatPanelInspector";
+            case DetachedPanel::pianoRoll:     return "windowFloatPanelPianoRoll";
+            case DetachedPanel::stepSequencer: return "windowFloatPanelStepSequencer";
+            case DetachedPanel::count:         break;
+        }
+        return "windowFloatPanel";
+    };
+
+    if (shouldFloat)
+    {
+        if (! isDetachedPanelVisibleInLayout (panel))
+            return;
+
+        auto* dockParent = getDetachedPanelDockParent (panel);
+        if (dockParent == nullptr)
+            return;
+
+        forEachDetachedPanelComponent (panel, [&] (juce::Component& component)
+        {
+            if (component.getParentComponent() == dockParent)
+                dockParent->removeChildComponent (&component);
+
+            if (component.getParentComponent() != state.container.get())
+                state.container->addAndMakeVisible (component);
+        });
+
+        auto floatWindow = std::make_unique<FloatingSectionWindow> (getDetachedPanelFloatingTitle (panel),
+                                                                     [this, panel] { setDetachedPanelFloating (panel, false, true); });
+        floatWindow->setContentNonOwned (state.container.get(), false);
+
+        int defaultWidth = 480;
+        int defaultHeight = 320;
+        if (panel == DetachedPanel::midi)
+        {
+            defaultWidth = 720;
+            defaultHeight = 470;
+        }
+        else if (panel == DetachedPanel::mixerArea || panel == DetachedPanel::channelRack || panel == DetachedPanel::inspector)
+        {
+            defaultWidth = 700;
+            defaultHeight = 420;
+        }
+        else if (panel == DetachedPanel::pianoRoll || panel == DetachedPanel::stepSequencer)
+        {
+            defaultWidth = 900;
+            defaultHeight = 520;
+        }
+
+        floatWindow->centreWithSize (defaultWidth, defaultHeight);
+        floatWindow->setVisible (true);
+        state.window = std::move (floatWindow);
+        state.floating = true;
+    }
+    else
+    {
+        if (state.window != nullptr)
+        {
+            state.window->clearContentComponent();
+            state.window->setVisible (false);
+            state.window.reset();
+        }
+
+        auto* dockParent = getDetachedPanelDockParent (panel);
+        if (dockParent != nullptr)
+        {
+            forEachDetachedPanelComponent (panel, [&] (juce::Component& component)
+            {
+                if (component.getParentComponent() == state.container.get())
+                    state.container->removeChildComponent (&component);
+
+                if (component.getParentComponent() != dockParent)
+                    dockParent->addAndMakeVisible (component);
+            });
+        }
+
+        state.floating = false;
+    }
+
+    if (! shuttingDown)
+        engine.getPropertyStorage().getPropertiesFile().setValue (getPropertyKey (panel), shouldFloat);
+
+    resized();
+    updateButtonsFromState();
+    repaint();
+}
+
+void BeatMakerNoRecord::closeDetachedPanelWindows()
+{
+    for (size_t i = 0; i < detachedPanelWindows.size(); ++i)
+    {
+        if (detachedPanelWindows[i].floating)
+            setDetachedPanelFloating (static_cast<DetachedPanel> (i), false);
+    }
+}
+
 void BeatMakerNoRecord::toggleSectionFloating (FloatSection section)
 {
     setSectionFloating (section, ! isSectionFloating (section));
@@ -5082,6 +6259,7 @@ void BeatMakerNoRecord::setSectionFloating (FloatSection section, bool shouldFlo
     bool* state = nullptr;
     std::unique_ptr<FloatingSectionWindow>* window = nullptr;
     SectionContainer* container = nullptr;
+    const char* floatPropertyKey = nullptr;
 
     switch (section)
     {
@@ -5089,16 +6267,19 @@ void BeatMakerNoRecord::setSectionFloating (FloatSection section, bool shouldFlo
             state = &workspaceSectionFloating;
             window = &workspaceFloatingWindow;
             container = &workspaceSection;
+            floatPropertyKey = "windowFloatWorkspace";
             break;
         case FloatSection::mixer:
             state = &mixerSectionFloating;
             window = &mixerFloatingWindow;
             container = &mixerSection;
+            floatPropertyKey = "windowFloatMixer";
             break;
         case FloatSection::piano:
             state = &pianoSectionFloating;
             window = &pianoFloatingWindow;
             container = &pianoSection;
+            floatPropertyKey = "windowFloatPiano";
             break;
     }
 
@@ -5195,6 +6376,10 @@ void BeatMakerNoRecord::setSectionFloating (FloatSection section, bool shouldFlo
         stepSequencer.repaint();
         midiPianoRoll.repaint();
     }
+
+    if (! shuttingDown && floatPropertyKey != nullptr)
+        engine.getPropertyStorage().getPropertiesFile().setValue (floatPropertyKey, shouldFloat);
+
     repaint();
 }
 
@@ -5913,6 +7098,7 @@ bool BeatMakerNoRecord::perform (const InvocationInfo& info)
             refreshPianoFloatingWindowUi();
             return true;
         case appCommandDockAllPanels:
+            closeDetachedPanelWindows();
             if (isSectionFloating (FloatSection::workspace))
                 setSectionFloating (FloatSection::workspace, false);
             if (isSectionFloating (FloatSection::mixer))
@@ -6067,9 +7253,12 @@ juce::PopupMenu BeatMakerNoRecord::getMenuForIndex (int topLevelMenuIndex, const
             addButtonItem (menuViewArranger, "Show/Hide Arranger Track", showArrangerTrackButton,
                            showArrangerTrackButton.getButtonText().containsIgnoreCase ("On"));
             m.addSeparator();
-            addButtonItem (menuViewZoomIn, "Zoom In", zoomInButton);
-            addButtonItem (menuViewZoomOut, "Zoom Out", zoomOutButton);
-            addButtonItem (menuViewZoomReset, "Reset Zoom", zoomResetButton);
+            addButtonItem (menuViewZoomIn, "Horizontal Zoom In", zoomInButton);
+            addButtonItem (menuViewZoomOut, "Horizontal Zoom Out", zoomOutButton);
+            addButtonItem (menuViewZoomReset, "Horizontal Zoom Reset", zoomResetButton);
+            addButtonItem (menuViewZoomVerticalIn, "Vertical Zoom In", zoomVerticalInButton);
+            addButtonItem (menuViewZoomVerticalOut, "Vertical Zoom Out", zoomVerticalOutButton);
+            addButtonItem (menuViewZoomVerticalReset, "Vertical Zoom Reset", zoomVerticalResetButton);
             m.addSeparator();
             addButtonItem (menuViewFocusSelection, "Focus Selection", focusSelectionButton);
             addButtonItem (menuViewCenterPlayhead, "Center Playhead", centerPlayheadButton);
@@ -6081,7 +7270,19 @@ juce::PopupMenu BeatMakerNoRecord::getMenuForIndex (int topLevelMenuIndex, const
             m.addItem (menuViewDockAllPanels, "Dock All Floating Panels (Cmd+Shift+D)", true,
                        ! isSectionFloating (FloatSection::workspace)
                        && ! isSectionFloating (FloatSection::mixer)
-                       && ! isSectionFloating (FloatSection::piano));
+                       && ! isSectionFloating (FloatSection::piano)
+                       && ! isDetachedPanelFloating (DetachedPanel::arrangement)
+                       && ! isDetachedPanelFloating (DetachedPanel::tracks)
+                       && ! isDetachedPanelFloating (DetachedPanel::clip)
+                       && ! isDetachedPanelFloating (DetachedPanel::midi)
+                       && ! isDetachedPanelFloating (DetachedPanel::audio)
+                       && ! isDetachedPanelFloating (DetachedPanel::fx)
+                       && ! isDetachedPanelFloating (DetachedPanel::trackMixer)
+                       && ! isDetachedPanelFloating (DetachedPanel::mixerArea)
+                       && ! isDetachedPanelFloating (DetachedPanel::channelRack)
+                       && ! isDetachedPanelFloating (DetachedPanel::inspector)
+                       && ! isDetachedPanelFloating (DetachedPanel::pianoRoll)
+                       && ! isDetachedPanelFloating (DetachedPanel::stepSequencer));
             m.addSeparator();
             m.addItem (menuViewPianoModeSplit, "Piano Editor: Split (Alt+1)", true,
                        getPianoEditorLayoutModeSelection() == PianoEditorLayoutMode::split);
@@ -6123,6 +7324,37 @@ juce::PopupMenu BeatMakerNoRecord::getMenuForIndex (int topLevelMenuIndex, const
             m.addSeparator();
             m.addItem (menuWindowPanelPianoRoll, "Piano Roll", true, windowPanelPianoRollVisible);
             m.addItem (menuWindowPanelStepSequencer, "Step Sequencer", true, windowPanelStepSequencerVisible);
+            m.addSeparator();
+            {
+                juce::PopupMenu detachMenu;
+                detachMenu.addItem (menuWindowFloatArrangementPanel, "Float Arrangement Panel", windowPanelArrangementVisible,
+                                    isDetachedPanelFloating (DetachedPanel::arrangement));
+                detachMenu.addItem (menuWindowFloatTracksPanel, "Float Tracks & Import Panel", windowPanelTrackVisible,
+                                    isDetachedPanelFloating (DetachedPanel::tracks));
+                detachMenu.addItem (menuWindowFloatClipPanel, "Float Clip Editing Panel", windowPanelClipVisible,
+                                    isDetachedPanelFloating (DetachedPanel::clip));
+                detachMenu.addItem (menuWindowFloatMidiPanel, "Float MIDI Editing Panel", windowPanelMidiVisible,
+                                    isDetachedPanelFloating (DetachedPanel::midi));
+                detachMenu.addItem (menuWindowFloatAudioPanel, "Float Audio Editing Panel", windowPanelAudioVisible,
+                                    isDetachedPanelFloating (DetachedPanel::audio));
+                detachMenu.addItem (menuWindowFloatFxPanel, "Float FX Chain Panel", windowPanelFxVisible,
+                                    isDetachedPanelFloating (DetachedPanel::fx));
+                detachMenu.addItem (menuWindowFloatTrackMixerPanel, "Float Track Mixer Panel", windowPanelTrackMixerVisible,
+                                    isDetachedPanelFloating (DetachedPanel::trackMixer));
+                detachMenu.addSeparator();
+                detachMenu.addItem (menuWindowFloatMixerAreaPanel, "Float Mixer Area", windowPanelMixerAreaVisible,
+                                    isDetachedPanelFloating (DetachedPanel::mixerArea));
+                detachMenu.addItem (menuWindowFloatChannelRackPanel, "Float Channel Rack", windowPanelChannelRackVisible,
+                                    isDetachedPanelFloating (DetachedPanel::channelRack));
+                detachMenu.addItem (menuWindowFloatInspectorPanel, "Float Inspector", windowPanelInspectorVisible,
+                                    isDetachedPanelFloating (DetachedPanel::inspector));
+                detachMenu.addSeparator();
+                detachMenu.addItem (menuWindowFloatPianoRollPanel, "Float Piano Roll", windowPanelPianoRollVisible,
+                                    isDetachedPanelFloating (DetachedPanel::pianoRoll));
+                detachMenu.addItem (menuWindowFloatStepSequencerPanel, "Float Step Sequencer", windowPanelStepSequencerVisible,
+                                    isDetachedPanelFloating (DetachedPanel::stepSequencer));
+                m.addSubMenu ("Float Individual Panels", detachMenu, true);
+            }
             m.addSeparator();
             m.addItem (menuWindowShowAllPanels, "Show All Panels", true, false);
             break;
@@ -6177,6 +7409,22 @@ void BeatMakerNoRecord::menuItemSelected (int menuItemID, int)
             setSectionFloating (section, false);
         else if (shouldBeVisible)
             setSectionFloating (section, false);
+
+        applyWindowPanelChange();
+    };
+
+    auto setDetachedPanelVisibility = [this, &applyWindowPanelChange] (bool& flag,
+                                                                       bool shouldBeVisible,
+                                                                       DetachedPanel panel,
+                                                                       bool forcePanelModeAll)
+    {
+        flag = shouldBeVisible;
+
+        if (! shouldBeVisible && isDetachedPanelFloating (panel))
+            setDetachedPanelFloating (panel, false);
+
+        if (shouldBeVisible && forcePanelModeAll)
+            setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
 
         applyWindowPanelChange();
     };
@@ -6265,6 +7513,9 @@ void BeatMakerNoRecord::menuItemSelected (int menuItemID, int)
         case menuViewZoomIn: zoomInButton.triggerClick(); break;
         case menuViewZoomOut: zoomOutButton.triggerClick(); break;
         case menuViewZoomReset: zoomResetButton.triggerClick(); break;
+        case menuViewZoomVerticalIn: zoomVerticalInButton.triggerClick(); break;
+        case menuViewZoomVerticalOut: zoomVerticalOutButton.triggerClick(); break;
+        case menuViewZoomVerticalReset: zoomVerticalResetButton.triggerClick(); break;
         case menuViewFocusSelection: focusSelectionButton.triggerClick(); break;
         case menuViewCenterPlayhead: centerPlayheadButton.triggerClick(); break;
         case menuViewFitProject: fitProjectButton.triggerClick(); break;
@@ -6331,66 +7582,124 @@ void BeatMakerNoRecord::menuItemSelected (int menuItemID, int)
             setDockPanelVisibility (windowPanelPianoVisible, ! windowPanelPianoVisible, FloatSection::piano);
             break;
         case menuWindowPanelArrangement:
-            windowPanelArrangementVisible = ! windowPanelArrangementVisible;
-            if (windowPanelArrangementVisible)
-                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelArrangementVisible,
+                                        ! windowPanelArrangementVisible,
+                                        DetachedPanel::arrangement,
+                                        true);
             break;
         case menuWindowPanelTracks:
-            windowPanelTrackVisible = ! windowPanelTrackVisible;
-            if (windowPanelTrackVisible)
-                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelTrackVisible,
+                                        ! windowPanelTrackVisible,
+                                        DetachedPanel::tracks,
+                                        true);
             break;
         case menuWindowPanelClipEditing:
-            windowPanelClipVisible = ! windowPanelClipVisible;
-            if (windowPanelClipVisible)
-                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelClipVisible,
+                                        ! windowPanelClipVisible,
+                                        DetachedPanel::clip,
+                                        true);
             break;
         case menuWindowPanelMidiEditing:
-            windowPanelMidiVisible = ! windowPanelMidiVisible;
-            if (windowPanelMidiVisible)
-                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelMidiVisible,
+                                        ! windowPanelMidiVisible,
+                                        DetachedPanel::midi,
+                                        true);
             break;
         case menuWindowPanelAudioEditing:
-            windowPanelAudioVisible = ! windowPanelAudioVisible;
-            if (windowPanelAudioVisible)
-                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelAudioVisible,
+                                        ! windowPanelAudioVisible,
+                                        DetachedPanel::audio,
+                                        true);
             break;
         case menuWindowPanelFxChain:
-            windowPanelFxVisible = ! windowPanelFxVisible;
-            if (windowPanelFxVisible)
-                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelFxVisible,
+                                        ! windowPanelFxVisible,
+                                        DetachedPanel::fx,
+                                        true);
             break;
         case menuWindowPanelTrackMixer:
-            windowPanelTrackMixerVisible = ! windowPanelTrackMixerVisible;
-            if (windowPanelTrackMixerVisible)
-                setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelTrackMixerVisible,
+                                        ! windowPanelTrackMixerVisible,
+                                        DetachedPanel::trackMixer,
+                                        true);
             break;
         case menuWindowPanelMixerArea:
-            windowPanelMixerAreaVisible = ! windowPanelMixerAreaVisible;
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelMixerAreaVisible,
+                                        ! windowPanelMixerAreaVisible,
+                                        DetachedPanel::mixerArea,
+                                        false);
             break;
         case menuWindowPanelChannelRack:
-            windowPanelChannelRackVisible = ! windowPanelChannelRackVisible;
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelChannelRackVisible,
+                                        ! windowPanelChannelRackVisible,
+                                        DetachedPanel::channelRack,
+                                        false);
             break;
         case menuWindowPanelInspector:
-            windowPanelInspectorVisible = ! windowPanelInspectorVisible;
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelInspectorVisible,
+                                        ! windowPanelInspectorVisible,
+                                        DetachedPanel::inspector,
+                                        false);
             break;
         case menuWindowPanelPianoRoll:
-            windowPanelPianoRollVisible = ! windowPanelPianoRollVisible;
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelPianoRollVisible,
+                                        ! windowPanelPianoRollVisible,
+                                        DetachedPanel::pianoRoll,
+                                        false);
             break;
         case menuWindowPanelStepSequencer:
-            windowPanelStepSequencerVisible = ! windowPanelStepSequencerVisible;
-            applyWindowPanelChange();
+            setDetachedPanelVisibility (windowPanelStepSequencerVisible,
+                                        ! windowPanelStepSequencerVisible,
+                                        DetachedPanel::stepSequencer,
+                                        false);
+            break;
+        case menuWindowFloatArrangementPanel:
+            if (windowPanelArrangementVisible)
+                toggleDetachedPanelFloating (DetachedPanel::arrangement);
+            break;
+        case menuWindowFloatTracksPanel:
+            if (windowPanelTrackVisible)
+                toggleDetachedPanelFloating (DetachedPanel::tracks);
+            break;
+        case menuWindowFloatClipPanel:
+            if (windowPanelClipVisible)
+                toggleDetachedPanelFloating (DetachedPanel::clip);
+            break;
+        case menuWindowFloatMidiPanel:
+            if (windowPanelMidiVisible)
+                toggleDetachedPanelFloating (DetachedPanel::midi);
+            break;
+        case menuWindowFloatAudioPanel:
+            if (windowPanelAudioVisible)
+                toggleDetachedPanelFloating (DetachedPanel::audio);
+            break;
+        case menuWindowFloatFxPanel:
+            if (windowPanelFxVisible)
+                toggleDetachedPanelFloating (DetachedPanel::fx);
+            break;
+        case menuWindowFloatTrackMixerPanel:
+            if (windowPanelTrackMixerVisible)
+                toggleDetachedPanelFloating (DetachedPanel::trackMixer);
+            break;
+        case menuWindowFloatMixerAreaPanel:
+            if (windowPanelMixerAreaVisible)
+                toggleDetachedPanelFloating (DetachedPanel::mixerArea);
+            break;
+        case menuWindowFloatChannelRackPanel:
+            if (windowPanelChannelRackVisible)
+                toggleDetachedPanelFloating (DetachedPanel::channelRack);
+            break;
+        case menuWindowFloatInspectorPanel:
+            if (windowPanelInspectorVisible)
+                toggleDetachedPanelFloating (DetachedPanel::inspector);
+            break;
+        case menuWindowFloatPianoRollPanel:
+            if (windowPanelPianoRollVisible)
+                toggleDetachedPanelFloating (DetachedPanel::pianoRoll);
+            break;
+        case menuWindowFloatStepSequencerPanel:
+            if (windowPanelStepSequencerVisible)
+                toggleDetachedPanelFloating (DetachedPanel::stepSequencer);
             break;
         case menuWindowShowAllPanels:
             windowPanelWorkspaceVisible = true;
@@ -6408,6 +7717,7 @@ void BeatMakerNoRecord::menuItemSelected (int menuItemID, int)
             windowPanelInspectorVisible = true;
             windowPanelPianoRollVisible = true;
             windowPanelStepSequencerVisible = true;
+            closeDetachedPanelWindows();
             setLeftDockPanelMode (LeftDockPanelMode::all, true, false);
             if (isSectionFloating (FloatSection::workspace))
                 setSectionFloating (FloatSection::workspace, false);
@@ -6695,7 +8005,7 @@ void BeatMakerNoRecord::setupSliders()
         windowPanelPianoRollVisible = properties.getBoolValue ("windowPanelPianoRollVisible", windowPanelPianoRollVisible);
         windowPanelStepSequencerVisible = properties.getBoolValue ("windowPanelStepSequencerVisible", windowPanelStepSequencerVisible);
         uiDensityMode = getUiDensityModeForStorageValue (properties.getValue ("uiDensityMode",
-                                                                                getUiDensityStorageValue (UiDensityMode::comfortable)));
+                                                                                getUiDensityStorageValue (UiDensityMode::compact)));
     }
 
     pianoFloatingAlwaysOnTop = engine.getPropertyStorage().getPropertiesFile().getBoolValue ("pianoFloatAlwaysOnTop", true);
@@ -6811,6 +8121,7 @@ void BeatMakerNoRecord::setupSliders()
             b->setColour (juce::TextButton::buttonOnColourId, bgOn);
             b->setColour (juce::TextButton::textColourOffId, text);
             b->setColour (juce::TextButton::textColourOnId, text);
+            b->setMouseCursor (juce::MouseCursor::PointingHandCursor);
         }
     };
 
@@ -6820,7 +8131,9 @@ void BeatMakerNoRecord::setupSliders()
     styleButtonSet ({ &newEditButton, &openEditButton, &saveButton, &saveAsButton, &undoButton, &redoButton, &helpButton,
                       &focusSelectionButton, &centerPlayheadButton, &fitProjectButton,
                       &playPauseButton, &stopButton, &returnToStartButton, &transportLoopButton,
-                      &setLoopToSelectionButton, &jumpPrevBarButton, &jumpNextBarButton, &zoomInButton, &zoomOutButton, &zoomResetButton,
+                      &setLoopToSelectionButton, &jumpPrevBarButton, &jumpNextBarButton,
+                      &zoomInButton, &zoomOutButton, &zoomResetButton,
+                      &zoomVerticalInButton, &zoomVerticalOutButton, &zoomVerticalResetButton,
                       &showMarkerTrackButton, &showArrangerTrackButton, &addMarkerButton, &prevMarkerButton, &nextMarkerButton,
                       &loopMarkersButton, &addSectionButton, &prevSectionButton, &nextSectionButton, &loopSectionButton,
                       &addTrackButton, &addMidiTrackButton, &addFloatingSynthTrackButton, &moveTrackUpButton, &moveTrackDownButton,
@@ -6857,7 +8170,8 @@ void BeatMakerNoRecord::setupSliders()
     const auto transportBg = juce::Colour::fromRGB (31, 76, 111);
     const auto transportBgOn = juce::Colour::fromRGB (64, 173, 238);
     styleButtonSet ({ &playPauseButton, &stopButton, &returnToStartButton, &transportLoopButton,
-                      &setLoopToSelectionButton, &zoomInButton, &zoomOutButton, &zoomResetButton },
+                      &setLoopToSelectionButton, &zoomInButton, &zoomOutButton, &zoomResetButton,
+                      &zoomVerticalInButton, &zoomVerticalOutButton, &zoomVerticalResetButton },
                     transportBg, transportBgOn, buttonText);
 
     const auto createBg = juce::Colour::fromRGB (57, 83, 87);
@@ -6910,6 +8224,9 @@ void BeatMakerNoRecord::setupSliders()
     trackSoloButton.setColour (juce::ToggleButton::textColourId, buttonText);
     pianoAlwaysOnTopButton.setColour (juce::ToggleButton::tickColourId, juce::Colour::fromRGB (125, 188, 244));
     pianoAlwaysOnTopButton.setColour (juce::ToggleButton::textColourId, buttonText);
+    trackMuteButton.setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    trackSoloButton.setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    pianoAlwaysOnTopButton.setMouseCursor (juce::MouseCursor::PointingHandCursor);
 
     const auto comboBg = juce::Colour::fromRGB (21, 30, 44);
     const auto comboOutline = juce::Colour::fromRGB (88, 124, 166);
@@ -6976,8 +8293,9 @@ void BeatMakerNoRecord::setupSliders()
     workflowStateLabel.setTooltip ("Live workflow summary: selected track, active clip context, and track instrument/FX state.");
     statusLabel.setTooltip ("Latest action feedback and warnings.");
     leftDockScrollSlider.setTooltip ("Scroll left control dock when all sections are not visible.");
-    horizontalScrollSlider.setTooltip ("Timeline horizontal scroll.");
-    verticalScrollSlider.setTooltip ("Track area vertical scroll.");
+    horizontalScrollSlider.setTooltip ("Timeline horizontal scroll (Cmd/Ctrl+wheel = horizontal zoom).");
+    verticalScrollSlider.setTooltip ("Track area vertical scroll (Cmd/Ctrl+Alt+wheel = vertical zoom).");
+    trackHeightSlider.setTooltip ("Track lane height (vertical zoom). Cmd/Ctrl+Alt+wheel also adjusts this.");
 
     newEditButton.setTooltip ("Create a new project with default startup state (MIDI instrument-ready).");
     openEditButton.setTooltip ("Open an existing .tracktionedit project.");
@@ -6998,9 +8316,12 @@ void BeatMakerNoRecord::setupSliders()
     returnToStartButton.setTooltip ("Move playhead to 0:00.");
     transportLoopButton.setTooltip ("Toggle transport looping.");
     setLoopToSelectionButton.setTooltip ("Set loop range to selected clip.");
-    zoomInButton.setTooltip ("Zoom timeline in.");
-    zoomOutButton.setTooltip ("Zoom timeline out.");
-    zoomResetButton.setTooltip ("Reset timeline zoom to default.");
+    zoomInButton.setTooltip ("Zoom timeline horizontally in.");
+    zoomOutButton.setTooltip ("Zoom timeline horizontally out.");
+    zoomResetButton.setTooltip ("Reset timeline horizontal zoom to default.");
+    zoomVerticalInButton.setTooltip ("Zoom tracks vertically in (larger track lanes).");
+    zoomVerticalOutButton.setTooltip ("Zoom tracks vertically out (smaller track lanes).");
+    zoomVerticalResetButton.setTooltip ("Reset vertical track zoom to default height.");
 
     addTrackButton.setTooltip ("Add a new audio track.");
     addMidiTrackButton.setTooltip ("Add a new MIDI track with default instrument routing.");
@@ -8473,6 +9794,17 @@ void BeatMakerNoRecord::handleTimelineRulerMouseWheel (const juce::MouseEvent& e
     const double primaryDelta = std::abs (wheel.deltaX) > std::abs (wheel.deltaY) ? wheel.deltaX : wheel.deltaY;
     if (std::abs (primaryDelta) <= 1.0e-6)
         return;
+
+    if ((e.mods.isCommandDown() || e.mods.isCtrlDown()) && e.mods.isAltDown())
+    {
+        const double strength = juce::jlimit (0.2, 2.0, std::abs (primaryDelta) * 2.4);
+        const double factor = primaryDelta >= 0.0 ? std::pow (1.16, strength) : std::pow (0.86, strength);
+        const double nextHeight = juce::jlimit (trackHeightSlider.getMinimum(),
+                                                trackHeightSlider.getMaximum(),
+                                                trackHeightSlider.getValue() * factor);
+        trackHeightSlider.setValue (nextHeight);
+        return;
+    }
 
     if (e.mods.isCommandDown() || e.mods.isCtrlDown())
     {
@@ -11908,6 +13240,9 @@ void BeatMakerNoRecord::updateButtonsFromState()
     zoomInButton.setEnabled (editComponent != nullptr);
     zoomOutButton.setEnabled (editComponent != nullptr);
     zoomResetButton.setEnabled (editComponent != nullptr);
+    zoomVerticalInButton.setEnabled (editComponent != nullptr);
+    zoomVerticalOutButton.setEnabled (editComponent != nullptr);
+    zoomVerticalResetButton.setEnabled (editComponent != nullptr);
     showMarkerTrackButton.setEnabled (editComponent != nullptr);
     showArrangerTrackButton.setEnabled (editComponent != nullptr);
     addMarkerButton.setEnabled (hasEdit);

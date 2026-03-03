@@ -84,7 +84,7 @@ public:
 
     juce::Font getTextButtonFont (juce::TextButton&, int buttonHeight) override
     {
-        return juce::Font (juce::FontOptions ((float) juce::jmax (13, juce::jmin (15, buttonHeight - 8)),
+        return juce::Font (juce::FontOptions ((float) juce::jmax (11, juce::jmin (13, buttonHeight - 9)),
                                               juce::Font::bold));
     }
 
@@ -134,9 +134,9 @@ public:
         if (! button.isEnabled())
             base = base.withMultipliedSaturation (0.20f).withAlpha (0.50f);
         else if (shouldDrawButtonAsDown)
-            base = base.brighter (0.12f);
+            base = base.brighter (0.22f);
         else if (shouldDrawButtonAsHighlighted)
-            base = base.brighter (0.06f);
+            base = base.brighter (0.16f);
 
         juce::ColourGradient fill (base.brighter (0.13f), bounds.getX(), bounds.getY(),
                                    base.darker (0.24f), bounds.getX(), bounds.getBottom(), false);
@@ -146,6 +146,12 @@ public:
         g.setColour (juce::Colours::white.withAlpha (0.14f));
         g.drawRoundedRectangle (bounds, 7.0f, 1.0f);
 
+        if (button.isEnabled() && shouldDrawButtonAsHighlighted)
+        {
+            g.setColour (juce::Colour::fromRGB (126, 192, 245).withAlpha (shouldDrawButtonAsDown ? 0.42f : 0.28f));
+            g.drawRoundedRectangle (bounds.expanded (0.4f), 7.6f, 1.1f);
+        }
+
         g.setColour (juce::Colours::black.withAlpha (0.20f));
         g.drawLine (bounds.getX() + 5.0f, bounds.getBottom() - 0.9f,
                     bounds.getRight() - 5.0f, bounds.getBottom() - 0.9f, 1.0f);
@@ -153,13 +159,18 @@ public:
 
     void drawButtonText (juce::Graphics& g,
                          juce::TextButton& button,
-                         bool,
-                         bool) override
+                         bool shouldDrawButtonAsHighlighted,
+                         bool shouldDrawButtonAsDown) override
     {
         auto textArea = button.getLocalBounds().reduced (8, 1);
-        g.setColour (button.findColour (button.getToggleState() ? juce::TextButton::textColourOnId
-                                                                 : juce::TextButton::textColourOffId)
-                        .withAlpha (button.isEnabled() ? 0.96f : 0.48f));
+        auto text = button.findColour (button.getToggleState() ? juce::TextButton::textColourOnId
+                                                                : juce::TextButton::textColourOffId)
+                        .withAlpha (button.isEnabled() ? 0.96f : 0.48f);
+
+        if (button.isEnabled() && shouldDrawButtonAsHighlighted)
+            text = text.brighter (shouldDrawButtonAsDown ? 0.22f : 0.14f);
+
+        g.setColour (text);
         g.setFont (getTextButtonFont (button, button.getHeight()));
         g.drawFittedText (button.getButtonText(), textArea, juce::Justification::centred, 1);
     }
@@ -883,6 +894,10 @@ BeatMakerNoRecord::BeatMakerNoRecord()
                                          &pianoOpenInstrumentButton, &pianoAlwaysOnTopButton, &pianoEditorModeTabs,
                                          &stepSequencerGroup, &stepSequencer, &pianoRollToolbar, &midiPianoRoll });
 
+    addAndMakeVisible (zoomVerticalInButton);
+    addAndMakeVisible (zoomVerticalOutButton);
+    addAndMakeVisible (zoomVerticalResetButton);
+
     addAndMakeVisible (commandToolbar);
 
     workspaceSection.addAndMakeVisible (workspaceGroup);
@@ -966,6 +981,12 @@ BeatMakerNoRecord::BeatMakerNoRecord()
     pianoSection.addAndMakeVisible (pianoRollHorizontalScrollBar);
     pianoSection.addAndMakeVisible (pianoRollVerticalScrollBar);
 
+    for (size_t i = 0; i < detachedPanelWindows.size(); ++i)
+    {
+        const auto panel = static_cast<DetachedPanel> (i);
+        detachedPanelWindows[i].container = std::make_unique<DetachedPanelContainer> (*this, panel);
+    }
+
     for (auto* scrollbar : { &stepSequencerHorizontalScrollBar, &pianoRollHorizontalScrollBar, &pianoRollVerticalScrollBar })
     {
         scrollbar->setAutoHide (false);
@@ -1014,12 +1035,67 @@ BeatMakerNoRecord::BeatMakerNoRecord()
     setWantsKeyboardFocus (true);
     updateButtonsFromState();
     setSize (1420, 900);
+
+    juce::Component::SafePointer<BeatMakerNoRecord> safeThisFloat (this);
+    juce::Timer::callAfterDelay (260, [safeThisFloat]
+    {
+        auto* owner = safeThisFloat.getComponent();
+        if (owner == nullptr)
+            return;
+
+        auto& properties = owner->engine.getPropertyStorage().getPropertiesFile();
+        const bool floatWorkspace = properties.getBoolValue ("windowFloatWorkspace", true);
+        const bool floatMixer = properties.getBoolValue ("windowFloatMixer", true);
+        const bool floatPiano = properties.getBoolValue ("windowFloatPiano", true);
+
+        if (floatWorkspace)
+            owner->windowPanelWorkspaceVisible = true;
+        if (floatMixer)
+            owner->windowPanelMixerVisible = true;
+        if (floatPiano)
+            owner->windowPanelPianoVisible = true;
+
+        if (floatWorkspace && ! owner->isSectionFloating (FloatSection::workspace))
+            owner->setSectionFloating (FloatSection::workspace, true);
+        if (floatMixer && ! owner->isSectionFloating (FloatSection::mixer))
+            owner->setSectionFloating (FloatSection::mixer, true);
+        if (floatPiano && ! owner->isSectionFloating (FloatSection::piano))
+            owner->setSectionFloating (FloatSection::piano, true);
+
+        auto restoreDetachedPanel = [owner, &properties] (DetachedPanel panel, const char* propertyKey, bool& panelVisibleFlag)
+        {
+            if (! properties.getBoolValue (propertyKey, false))
+                return;
+
+            panelVisibleFlag = true;
+            if (! owner->isDetachedPanelFloating (panel))
+                owner->setDetachedPanelFloating (panel, true);
+        };
+
+        restoreDetachedPanel (DetachedPanel::arrangement, "windowFloatPanelArrangement", owner->windowPanelArrangementVisible);
+        restoreDetachedPanel (DetachedPanel::tracks, "windowFloatPanelTracks", owner->windowPanelTrackVisible);
+        restoreDetachedPanel (DetachedPanel::clip, "windowFloatPanelClip", owner->windowPanelClipVisible);
+        restoreDetachedPanel (DetachedPanel::midi, "windowFloatPanelMidi", owner->windowPanelMidiVisible);
+        restoreDetachedPanel (DetachedPanel::audio, "windowFloatPanelAudio", owner->windowPanelAudioVisible);
+        restoreDetachedPanel (DetachedPanel::fx, "windowFloatPanelFx", owner->windowPanelFxVisible);
+        restoreDetachedPanel (DetachedPanel::trackMixer, "windowFloatPanelTrackMixer", owner->windowPanelTrackMixerVisible);
+        restoreDetachedPanel (DetachedPanel::mixerArea, "windowFloatPanelMixerArea", owner->windowPanelMixerAreaVisible);
+        restoreDetachedPanel (DetachedPanel::channelRack, "windowFloatPanelChannelRack", owner->windowPanelChannelRackVisible);
+        restoreDetachedPanel (DetachedPanel::inspector, "windowFloatPanelInspector", owner->windowPanelInspectorVisible);
+        restoreDetachedPanel (DetachedPanel::pianoRoll, "windowFloatPanelPianoRoll", owner->windowPanelPianoRollVisible);
+        restoreDetachedPanel (DetachedPanel::stepSequencer, "windowFloatPanelStepSequencer", owner->windowPanelStepSequencerVisible);
+
+        owner->resized();
+        owner->updateButtonsFromState();
+    });
 }
 
 BeatMakerNoRecord::~BeatMakerNoRecord()
 {
+    shuttingDown = true;
     pendingUiUpdateFlags.store (pendingUiUpdateNone, std::memory_order_relaxed);
     pendingUiUpdatePosted.store (false, std::memory_order_relaxed);
+    closeDetachedPanelWindows();
     closeFloatingWindows();
     topMenuBar.setModel (nullptr);
     setLookAndFeel (nullptr);
@@ -1081,6 +1157,24 @@ void BeatMakerNoRecord::setupCallbacks()
     zoomInButton.onClick = [this] { zoomTimeline (0.7); };
     zoomOutButton.onClick = [this] { zoomTimeline (1.4); };
     zoomResetButton.onClick = [this] { resetZoom(); };
+    zoomVerticalInButton.onClick = [this]
+    {
+        const double nextHeight = juce::jlimit (trackHeightSlider.getMinimum(),
+                                                trackHeightSlider.getMaximum(),
+                                                trackHeightSlider.getValue() * 1.12);
+        trackHeightSlider.setValue (nextHeight);
+    };
+    zoomVerticalOutButton.onClick = [this]
+    {
+        const double nextHeight = juce::jlimit (trackHeightSlider.getMinimum(),
+                                                trackHeightSlider.getMaximum(),
+                                                trackHeightSlider.getValue() * 0.89);
+        trackHeightSlider.setValue (nextHeight);
+    };
+    zoomVerticalResetButton.onClick = [this]
+    {
+        trackHeightSlider.setValue (58.0);
+    };
     showMarkerTrackButton.onClick = [this] { toggleMarkerTrackVisibility(); };
     showArrangerTrackButton.onClick = [this] { toggleArrangerTrackVisibility(); };
     addMarkerButton.onClick = [this] { addMarkerAtPlayhead(); };

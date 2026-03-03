@@ -10,6 +10,7 @@
 #include "../common/Components.h"
 #include "DawScaffold.h"
 #include <atomic>
+#include <array>
 #include <memory>
 
 namespace te = tracktion;
@@ -44,6 +45,23 @@ private:
         workspace,
         mixer,
         piano
+    };
+
+    enum class DetachedPanel
+    {
+        arrangement = 0,
+        tracks,
+        clip,
+        midi,
+        audio,
+        fx,
+        trackMixer,
+        mixerArea,
+        channelRack,
+        inspector,
+        pianoRoll,
+        stepSequencer,
+        count
     };
 
     enum class PianoRollDragMode
@@ -146,6 +164,20 @@ private:
         void closeButtonPressed() override;
 
         std::function<void()> onClosePressed;
+    };
+
+    class DetachedPanelContainer : public juce::Component
+    {
+    public:
+        DetachedPanelContainer (BeatMakerNoRecord& ownerToUse, DetachedPanel panelToUse);
+
+    private:
+        void paint (juce::Graphics& g) override;
+        void resized() override;
+        void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
+
+        BeatMakerNoRecord& owner;
+        DetachedPanel panel;
     };
 
     class LayoutSplitter : public juce::Component
@@ -336,9 +368,12 @@ private:
     juce::TextButton setLoopToSelectionButton { "Loop Selected" };
     juce::TextButton jumpPrevBarButton { "< Bar" };
     juce::TextButton jumpNextBarButton { "Bar >" };
-    juce::TextButton zoomInButton { "Zoom +" };
-    juce::TextButton zoomOutButton { "Zoom -" };
-    juce::TextButton zoomResetButton { "Zoom 1:1" };
+    juce::TextButton zoomInButton { "H +" };
+    juce::TextButton zoomOutButton { "H -" };
+    juce::TextButton zoomResetButton { "H 1:1" };
+    juce::TextButton zoomVerticalInButton { "V +" };
+    juce::TextButton zoomVerticalOutButton { "V -" };
+    juce::TextButton zoomVerticalResetButton { "V 1:1" };
     juce::TextButton showMarkerTrackButton { "Markers: Off" };
     juce::TextButton showArrangerTrackButton { "Arranger: Off" };
     juce::TextButton addMarkerButton { "Add Marker" };
@@ -545,9 +580,17 @@ private:
     bool mixerSectionFloating = false;
     bool pianoSectionFloating = false;
     bool pianoFloatingAlwaysOnTop = true;
+    bool shuttingDown = false;
     std::unique_ptr<FloatingSectionWindow> workspaceFloatingWindow;
     std::unique_ptr<FloatingSectionWindow> mixerFloatingWindow;
     std::unique_ptr<FloatingSectionWindow> pianoFloatingWindow;
+    struct DetachedPanelWindowState
+    {
+        bool floating = false;
+        std::unique_ptr<DetachedPanelContainer> container;
+        std::unique_ptr<FloatingSectionWindow> window;
+    };
+    std::array<DetachedPanelWindowState, static_cast<size_t> (DetachedPanel::count)> detachedPanelWindows;
     juce::GroupComponent sessionGroup { {}, "Session & Transport" };
     juce::GroupComponent arrangementGroup { {}, "Arrangement" };
     juce::GroupComponent trackGroup { {}, "Tracks & Import" };
@@ -677,7 +720,9 @@ private:
     DefaultSynthMode getDefaultSynthModeSelection() const;
     void refreshChannelRackInspector();
     void closeFloatingWindows();
+    void closeDetachedPanelWindows();
     void layoutSectionContent (FloatSection section, juce::Rectangle<int> bounds);
+    void layoutDetachedPanelContent (DetachedPanel panel, juce::Rectangle<int> bounds);
     void setupCommandToolbar();
     void refreshCommandToolbarState();
     void setupTrackAreaToolbar();
@@ -691,6 +736,14 @@ private:
     void refreshAllToolbarStates();
     bool isSectionFloating (FloatSection section) const;
     void setSectionFloating (FloatSection section, bool shouldFloat, bool fromWindowClose = false);
+    bool isDetachedPanelFloating (DetachedPanel panel) const;
+    void setDetachedPanelFloating (DetachedPanel panel, bool shouldFloat, bool fromWindowClose = false);
+    void toggleDetachedPanelFloating (DetachedPanel panel);
+    juce::String getDetachedPanelFloatingTitle (DetachedPanel panel) const;
+    juce::Component* getDetachedPanelDockParent (DetachedPanel panel);
+    bool isDetachedPanelVisibleInLayout (DetachedPanel panel) const;
+    void forEachDetachedPanelComponent (DetachedPanel panel,
+                                        const std::function<void (juce::Component&)>& visitor);
     juce::String getSectionFloatingTitle (FloatSection section) const;
     juce::String getPianoFloatingWindowTitle() const;
     void refreshPianoFloatingWindowUi();
