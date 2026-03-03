@@ -5964,20 +5964,9 @@ void BeatMakerNoRecord::setSectionFloating (FloatSection section, bool shouldFlo
             minSavedHeight = 360;
         }
 
-        auto getDisplayWorkingArea = [] (const juce::Displays::Display& display)
-        {
-           #if JUCE_MAJOR_VERSION >= 8
-            return display.userBounds.getSmallestIntegerContainer();
-           #else
-            return display.userArea;
-           #endif
-        };
-
-        auto userArea = juce::Rectangle<int> (0, 0, defaultWidth, defaultHeight);
-        if (auto* display = juce::Desktop::getInstance().getDisplays().getDisplayForRect (getScreenBounds()))
-            userArea = getDisplayWorkingArea (*display);
-        else if (auto* primary = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
-            userArea = getDisplayWorkingArea (*primary);
+        auto userArea = juce::Desktop::getInstance().getDisplays().getTotalBounds (true);
+        if (userArea.isEmpty())
+            userArea = juce::Rectangle<int> (0, 0, defaultWidth, defaultHeight);
 
         if (! userArea.isEmpty())
         {

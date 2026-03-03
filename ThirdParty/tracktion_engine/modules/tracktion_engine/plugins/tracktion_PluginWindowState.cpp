@@ -247,14 +247,9 @@ juce::Point<int> PluginWindowState::choosePositionForPluginWindow()
             if (p->isFocused())
                 return p->getBounds().getPosition() + juce::Point<int> (80, 80);
 
-    if (auto* primaryDisplay = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
-    {
-       #if JUCE_MAJOR_VERSION >= 8
-        return primaryDisplay->userBounds.getRelativePoint (0.2f, 0.2f).roundToInt();
-       #else
-        return primaryDisplay->userArea.getRelativePoint (0.2f, 0.2f);
-       #endif
-    }
+    const auto displayBounds = juce::Desktop::getInstance().getDisplays().getTotalBounds (true);
+    if (! displayBounds.isEmpty())
+        return displayBounds.getRelativePoint (0.2f, 0.2f);
 
     return { 80, 80 };
 }
