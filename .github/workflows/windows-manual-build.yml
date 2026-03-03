@@ -1,0 +1,47 @@
+name: Windows Manual Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: Build configuration
+        required: true
+        default: Release
+        type: choice
+        options:
+          - Release
+          - Debug
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure (Windows preset)
+        run: cmake --preset windows-vs2022
+
+      - name: Build app + UI regression tests
+        run: cmake --build --preset windows-vs2022-release --config ${{ inputs.build_type }}
+
+      - name: Run UI regression tests
+        run: ctest --preset windows-vs2022-release-tests --output-on-failure -C ${{ inputs.build_type }}
+
+      - name: Collect app executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          $exe = Get-ChildItem -Path build/windows-vs2022 -Filter TheSampledexWorkflow.exe -Recurse | Select-Object -First 1
+          if (-not $exe) {
+            throw "TheSampledexWorkflow.exe was not found under build/windows-vs2022"
+          }
+          Copy-Item $exe.FullName artifacts/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TheSampledexWorkflow-${{ inputs.build_type }}
+          path: artifacts/**

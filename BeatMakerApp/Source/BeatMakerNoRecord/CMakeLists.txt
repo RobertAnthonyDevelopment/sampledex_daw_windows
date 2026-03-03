@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 set (TARGET_NAME TheSampledexWorkflow)
+option (SAMPLEXDEX_WINDOWS_BUILD "Enable Windows-oriented build toggles" OFF)
 
 if (MSVC)
     set (CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -17,12 +18,17 @@ endif()
 set_property(GLOBAL PROPERTY USE_FOLDERS YES)
 option(JUCE_ENABLE_MODULE_SOURCE_GROUPS "Enable Module Source Groups" ON)
 
+set (SAMPLEXDEX_ENABLE_AU_HOST 0)
+if (APPLE)
+    set (SAMPLEXDEX_ENABLE_AU_HOST 1)
+endif()
+
 juce_add_gui_app(${TARGET_NAME}
     BUNDLE_ID "com.sampledex.TheSampledexWorkflow"
     MICROPHONE_PERMISSION_ENABLED FALSE
     REQUIRES_FULL_SCREEN TRUE
     STATUS_BAR_HIDDEN TRUE
-    PLUGINHOST_AU TRUE)
+    PLUGINHOST_AU ${SAMPLEXDEX_ENABLE_AU_HOST})
 
 juce_generate_juce_header(${TARGET_NAME})
 
@@ -42,13 +48,20 @@ target_sources(${TARGET_NAME} PRIVATE ${SourceFiles})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/.. PREFIX Source FILES ${SourceFiles})
 
 target_compile_definitions(${TARGET_NAME} PRIVATE
-    JUCE_PLUGINHOST_AU=1
+    JUCE_PLUGINHOST_AU=${SAMPLEXDEX_ENABLE_AU_HOST}
     JUCE_PLUGINHOST_VST3=1
     JUCE_USE_CURL=0
     JUCE_WEB_BROWSER=0
     JUCE_MODAL_LOOPS_PERMITTED=1
     JUCE_STRICT_REFCOUNTEDPOINTER=1
     TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH=1)
+
+if (WIN32 OR SAMPLEXDEX_WINDOWS_BUILD)
+    target_compile_definitions (${TARGET_NAME} PRIVATE
+        JUCE_DIRECTSOUND=1
+        JUCE_WASAPI=1
+        JUCE_ASIO=1)
+endif()
 
 target_link_libraries(${TARGET_NAME} PRIVATE
     tracktion::tracktion_core
